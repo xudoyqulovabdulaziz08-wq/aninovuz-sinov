@@ -172,7 +172,8 @@ class DbSessionMiddleware(BaseMiddleware):
                 await self._reset_circuit_breaker()
 
                 # Kelajakdagi tezkor so'rovlar uchun L1 ga yozamiz
-                await state.l1_cache.set(user_id, user_data)
+                # ✅ TO'G'RI: Standart OrderedDict uslubida ma'lumot yozish (await-siz)
+                state.l1_cache[user_id] = user_data
                 
                 data["user"] = copy.deepcopy(user_data)
                 
