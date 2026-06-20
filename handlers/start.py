@@ -6,7 +6,14 @@ from services.user_service import UserService
 router = Router()
 
 
+@router.message(F.photo)
+async def get_bot_specific_file_id(message: Message):
+    # Bot aynan o'zi ko'rayotgan eng katta o'lchamli rasm ID-sini logga chiqaradi
+    photo_id = message.photo[-1].file_id
+    print(f"\n\n🔥 BOTINGIZ UCHUN TO'G'RI FILE_ID: {photo_id}\n\n")
+    await message.answer(f"✅ Rasm ID-si olindi! Uni nusxalab kodga qo'ying.\n\n<code>{photo_id}</code>")
 
+# Asosiy sta
 
 @router.message(CommandStart())
 async def cmd_start(message: Message, user: dict, user_service: UserService):
