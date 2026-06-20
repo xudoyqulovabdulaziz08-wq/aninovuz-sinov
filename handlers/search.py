@@ -9,7 +9,7 @@ async def search_menu(callback: CallbackQuery):
     await callback.answer()
     
     # 🖼 Qidiruv bo'limi uchun rasm (Startdagi rasmni qoldirdik, o'zgartirmoqchi bo'lsangiz yangi file_id qo'yasiz)
-    search_image_file_id = "AgACAgIAAxkBAAI8Vmo2h33mXWFJrVt2WytylhrKnSRKAAJHGGsbZ6WxSVOJWvc1e0TUAQADAgADdwADPAQ"
+    search_image_file_id = "AgACAgIAAxkBAAI8pmo2wwmGj_SoELEjURiyUyabzhwoAAI5GWsbZ6WxSUf3FNSMy6ajAQADAgADdwADPAQ"
     
     text = (
         "╔═════════ 🔍 ═════════╗\n"
@@ -54,7 +54,7 @@ async def search_by_name(callback: CallbackQuery):
     await callback.answer()
     
     # O'sha asosiy rasmingiz ID si (barcha qidiruvlarda bir xil tursa interfeys silliq chiqadi)
-    search_image_file_id = "AgACAgIAAxkBAAI8Vmo2h33mXWFJrVt2WytylhrKnSRKAAJHGGsbZ6WxSVOJWvc1e0TUAQADAgADdwADPAQ"
+    search_image_file_id = "AgACAgIAAxkBAAI8pmo2wwmGj_SoELEjURiyUyabzhwoAAI5GWsbZ6WxSUf3FNSMy6ajAQADAgADdwADPAQ"
     
     text = (
         "╔═════════ 🔍 ═════════╗\n"
@@ -91,7 +91,7 @@ async def search_by_name(callback: CallbackQuery):
 async def search_by_id(callback: CallbackQuery):
     await callback.answer()
     
-    search_image_file_id = "AgACAgIAAxkBAAI8Vmo2h33mXWFJrVt2WytylhrKnSRKAAJHGGsbZ6WxSVOJWvc1e0TUAQADAgADdwADPAQ"
+    search_image_file_id = "AgACAgIAAxkBAAI8pmo2wwmGj_SoELEjURiyUyabzhwoAAI5GWsbZ6WxSUf3FNSMy6ajAQADAgADdwADPAQ"
     
     text = (
         "╔═════════ 🔍 ═════════╗\n"
