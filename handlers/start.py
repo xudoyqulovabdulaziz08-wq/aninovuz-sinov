@@ -21,7 +21,7 @@ async def cmd_start(message: Message, user: dict, user_service: UserService):
     username = message.from_user.username or "do'stim"
     
     # 🔥 Telegram serveridagi doimiy va eng sifatli rasm ID-si
-    start_image_file_id = "AgACAgIAAxkBAAI8Rmo2fma5AXPIoM2q4ZCKKizFvTVwAAIyGGsbedywST6juNnOr2gkAQADAgADdwADPAQ" 
+    start_image_file_id = "AgACAgIAAxkBAAI8Vmo2h33mXWFJrVt2WytylhrKnSRKAAJHGGsbZ6WxSVOJWvc1e0TUAQADAgADdwADPAQ" 
     
     # 📝 Mukammal va o'ziga xos matn
     welcome_text = (
