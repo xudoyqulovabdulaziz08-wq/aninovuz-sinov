@@ -9,34 +9,32 @@ router = Router()
 async def guide_menu(callback: CallbackQuery):
     await callback.answer()
     
-    # 🖼 Qo'llanma bo'limi uchun rasm (Startdagi rasmni qoldirdik, o'zgartirmoqchi bo'lsangiz yangi file_id qo'yasiz)
     guide_image_file_id = "AgACAgIAAxkBAAI8pmo2wwmGj_SoELEjURiyUyabzhwoAAI5GWsbZ6WxSUf3FNSMy6ajAQADAgADdwADPAQ"
     
     welcome_text = (
         "╔═════════ 📚 ═════════╗\n"
         "   <b>FOYDALANISH QO'LLANMASI</b>\n"
         "╚═════════ 📚 ═════════╝\n\n"
-        "Salom! Bu yerda botimizning barcha imkoniyatlari va funksiyalaridan qanday foydalanishni o'rganishingiz mumkin. 🌟\n\n"
+        "Bot imkoniyatlaridan to'g'ri foydalanish bo'yicha qisqacha yo'riqnoma: 🌟\n\n"
         "<b>1️⃣ Asosiy menyu</b>\n"
-        "<blockquote expandable>Asosiy menyuda siz qidiruv, reklama, VIP va boshqa bo'limlarga kirishingiz mumkin. Har bir bo'limda o'ziga xos imkoniyatlar mavjud.</blockquote>\n\n"
-        "<b>2️⃣ Qidiruv</b>\n"
-        "<blockquote expandable>Qidiruv bo'limida siz animelarni nomi, ID raqami yoki janri bo'yicha qidirishingiz mumkin. Har bir qidiruv turi sizga kerakli natijalarni tezda topishga yordam beradi.</blockquote>\n\n"
-        "<b>3️⃣ Vip olish</b>\n"
-        "<blockquote expandable>VIP bo'limida siz maxsus imtiyozlar va bonuslarga ega bo'lishingiz mumkin. VIP foydalanuvchilarimizga doimiy ravishda yangi imkoniyatlar qo'shib boramiz!</blockquote>\n\n"
-        "<b>4️⃣ Yordam markazi</b>\n\n"
-        "<blockquote expandable>Har bir bo'limda sizga kerakli ma'lumotlar va amallar mavjud. Agar biror narsani tushunmasangiz yoki yordam kerak bo'lsa, pastdagi tugmani bosib biz bilan bog'laning!</blockquote>"
-    
-        "Har bir bo'limda sizga kerakli ma'lumotlar va amallar mavjud. Agar biror narsani tushunmasangiz yoki yordam kerak bo'lsa, pastdagi tugmani bosib biz bilan bog'laning!"
+        "<blockquote expandable>Bu yerda qidiruv, reklama, VIP va aloqa bo'limlari mavjud. Har bir bo'lim loyihadan to'liq foydalanish imkonini beradi.</blockquote>\n\n"
+        "<b>2️⃣ Qidiruv tizimi</b>\n"
+        "<blockquote expandable>Animelarni nomi, maxsus ID raqami yoki sevimli janrlaringiz bo'yicha tez va oson qidirib topishingiz mumkin.</blockquote>\n\n"
+        "<b>3️⃣ VIP imtiyozlar</b>\n"
+        "<blockquote expandable>VIP bo'lim orqali maxsus statusga ega bo'ling hamda botdagi eksklyuziv bonus va qulayliklarni birinchilardan bo'lib faollashtiring!</blockquote>\n\n"
+        "⚠️ Agar biror savol yoki muammo yuzaga kelsa, quyidagi tugma orqali yordam markaziga bog'laning."
     )
     
     guide_keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_to_start", style="danger")],
-            [InlineKeyboardButton(text="💬 Aloqa", callback_data="support", style="primary")]
+            [
+                InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_to_start"),
+                InlineKeyboardButton(text="💬 Aloqa", callback_data="support")
+            ]
         ]
     )
+    
     try:
-        # Matn o'rniga Media va Klaviatura birga chiroyli edit bo'ladi
         await callback.message.edit_media(
             media=InputMediaPhoto(
                 media=guide_image_file_id,
