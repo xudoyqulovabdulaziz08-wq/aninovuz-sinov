@@ -9,7 +9,7 @@ async def advertise_menu(callback: CallbackQuery):
     await callback.answer()
     
     # 🖼 Reklama bo'limi uchun rasm (Startdagi rasmni qoldirdik, o'zgartirmoqchi bo'lsangiz yangi file_id qo'yasiz)
-    advertise_image_file_id = "AgACAgIAAxkBAAI8pmo2wwmGj_SoELEjURiyUyabzhwoAAI5GWsbZ6WxSUf3FNSMy6ajAQADAgADdwADPAQ"
+    advertise_image_file_id = "AgACAgIAAxkBAAI8rWo2yOOJrbYjf6oN-0buXgcqrr91AAJqGWsbZ6WxSdfP89-yJYeKAQADAgADdwADPAQ"
     
     text = (
         "╔═════════ 📢 ═════════╗\n"
@@ -24,9 +24,9 @@ async def advertise_menu(callback: CallbackQuery):
     
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="📢 Reklama berish", callback_data="advertise_submit", style="primary")],
-            [InlineKeyboardButton(text="💰 Reklama narxlari", callback_data="advertise_prices", style="primary")],
-            [InlineKeyboardButton(text="📜 Reklama shartlari", callback_data="advertise_terms", style="primary")],
+            [InlineKeyboardButton(text="📢 Reklama berish", callback_data="advertise_submit")],
+            [InlineKeyboardButton(text="💰 Reklama narxlari", callback_data="advertise_prices")],
+            [InlineKeyboardButton(text="📜 Reklama shartlari", callback_data="advertise_terms")],
             # ⬇️ "Orqaga" tugmasi start.py faylidagi 'back_to_start' handleriga ulandi!
             [InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_to_start", style="danger")]
         ]

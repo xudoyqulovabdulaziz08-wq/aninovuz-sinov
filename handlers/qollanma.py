@@ -9,7 +9,7 @@ router = Router()
 async def guide_menu(callback: CallbackQuery):
     await callback.answer()
     
-    guide_image_file_id = "AgACAgIAAxkBAAI8pmo2wwmGj_SoELEjURiyUyabzhwoAAI5GWsbZ6WxSUf3FNSMy6ajAQADAgADdwADPAQ"
+    guide_image_file_id = "AgACAgIAAxkBAAI8r2o2yqRxEiN_ZhKFQPu58i9D0s13AAJyGWsbZ6WxSZJ088Ot-5S2AQADAgADdwADPAQ"
     
     welcome_text = (
         "╔═════════ 📚 ═════════╗\n"
@@ -28,8 +28,11 @@ async def guide_menu(callback: CallbackQuery):
     guide_keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_to_start"),
+                
                 InlineKeyboardButton(text="💬 Aloqa", callback_data="support")
+            ],
+            [
+                InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_to_start", style="danger")
             ]
         ]
     )
