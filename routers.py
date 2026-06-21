@@ -15,7 +15,8 @@ from handlers.admin_panel.admin_anime import(
 )
 from handlers.admin_panel.admin_channel import(
     channel_menu,
-    add_channel
+    add_channel,
+    list_channel
 )
 from handlers.admin_panel.admin_advert import(
     admin_advet_menu
@@ -43,6 +44,7 @@ main_router.include_routers(
     admin_vip_menu.router,
 
     add_channel.router,
+    list_channel.router,
 
     qollanma.router,
     reklama.router,
