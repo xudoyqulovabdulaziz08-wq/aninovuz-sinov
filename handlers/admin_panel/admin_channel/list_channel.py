@@ -178,3 +178,164 @@ async def show_channel_info(callback: CallbackQuery, session: Any):
             logger.error(f"❌ chaninfo ko'rsatishda xatolik: {e}")
 
             
+
+
+
+
+
+
+@router.callback_query(F.data.startswith("chandel:"))
+async def ask_delete_confirmation(callback: CallbackQuery, session: Any):
+    await callback.answer()
+    
+    # Callback ma'lumotlarini ajratib olamiz (chandel:channel_id:current_page)
+    _, channel_id_str, page_str = callback.data.split(":")
+    channel_id = int(channel_id_str)
+    page = int(page_str)
+    
+    service = ChannelService(session=session)
+    channel = await service.get_channel(channel_id)
+    
+    if not channel:
+        await callback.message.edit_text(
+            text="❌ Kanal ma'lumotlari topilmadi yoki u allaqachon o‘chirilgan.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="⬅️ Ro‘yxatga qaytish", callback_data=f"chanpage:{page}", style="danger")]
+            ])
+        )
+        return
+        
+    text = (
+        f"⚠️ {html.bold('DIQQAT! Kanalni o‘chirishni tasdiqlang')}\n\n"
+        f"Siz rostdan ham {html.bold(channel.get('title'))} ({html.code(channel_id)}) kanalini "
+        f"tizimdan butunlay o‘chirib tashlamoqchimisiz?\n\n"
+        f"ℹ️ {html.italic('Eslatma: Bu amalni ortga qaytarib bo‘lmaydi va keshlar butunlay tozalanadi!')}"
+    )
+    
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                # "Ha" tugmasi bosilsa, yakuniy o'chirish handleriga o'tadi
+                InlineKeyboardButton(text="🟢 Ha, o‘chirilsin", callback_data=f"chandel_confirm:{channel_id}:{page}", style="success"),
+                # "Yo'q" tugmasi bosilsa, hech narsa o'zgarmasdan kanal info sahifasiga qaytadi
+                InlineKeyboardButton(text="🔴 Yo‘q, bekor qilish", callback_data=f"chaninfo:{channel_id}:{page}", style="danger")
+            ]
+        ]
+    )
+    
+    try:
+        await callback.message.edit_text(text=text, reply_markup=kb, parse_mode="HTML")
+    except TelegramBadRequest:
+        pass
+
+
+
+
+
+
+@router.callback_query(F.data.startswith("chandel_confirm:"))
+async def execute_channel_deletion(callback: CallbackQuery, session: Any):
+    # Callback ma'lumotlarini ajratib olamiz
+    _, channel_id_str, page_str = callback.data.split(":")
+    channel_id = int(channel_id_str)
+    page = int(page_str)
+    
+    service = ChannelService(session=session)
+    
+    # Biznes mantiq orqali bazadan o'chirish va keshni invalidatsiya qilish
+    success = await service.delete_channel(channel_id)
+    
+    if not success:
+        await callback.answer("❌ Kanalni o‘chirishda xatolik yuz berdi!", show_alert=True)
+        return
+        
+    # Chiroyli bildirishnoma (alert) chiqaradi
+    await callback.answer("🗑 Kanal tizimdan butunlay o‘chirildi va kesh yangilandi!", show_alert=True)
+    
+    # Kanal muvaffaqiyatli o'chgach, adminni avtomatik ravishda o'zi turgan sahifadagi ro'yxatga qaytaramiz
+    callback.data = f"chanpage:{page}"
+    await list_channels(callback, session)
+
+
+
+
+
+
+
+@router.callback_query(F.data.startswith("chantoggle:"))
+async def ask_toggle_confirmation(callback: CallbackQuery, session: Any):
+    await callback.answer()
+    
+    # Callback ma'lumotlarini ajratib olamiz (chantoggle:channel_id:current_page)
+    _, channel_id_str, page_str = callback.data.split(":")
+    channel_id = int(channel_id_str)
+    page = int(page_str)
+    
+    service = ChannelService(session=session)
+    channel = await service.get_channel(channel_id)
+    
+    if not channel:
+        await callback.message.edit_text(
+            text="❌ Kanal ma'lumotlari topilmadi.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="⬅️ Ro‘yxatga qaytish", callback_data=f"chanpage:{page}", style="danger")]
+            ])
+        )
+        return
+        
+    # Hozirgi holatiga qarab kelgusi holat matnini tayyorlaymiz
+    current_status = channel.get("is_active")
+    next_status_text = "🔴 O‘chirish (Tekshirmaslik)" if current_status else "🟢 Yoqish (Majburiy obunaga qo‘shish)"
+    
+    text = (
+        f"🔄 {html.bold('Kanal holatini o‘zgartirishni tasdiqlang')}\n\n"
+        f"Kanal: {html.bold(channel.get('title'))}\n"
+        f"Hozirgi holat: {'🟢 Faol' if current_status else '🔴 O‘chiq'}\n\n"
+        f"Siz rostdan ham ushbu kanal holatini {html.underline(next_status_text)} holatiga o‘tkazmoqchimisiz?"
+    )
+    
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                # "Ha" tugmasi bosilsa, yakuniy statusni o'zgartirish handleriga o'tadi
+                InlineKeyboardButton(text="✅ Ha, o‘zgartirilsin", callback_data=f"chantoggle_confirm:{channel_id}:{page}", style="success"),
+                # "Yo'q" tugmasi bosilsa, hech narsa o'zgarmasdan kanal info sahifasiga qaytadi
+                InlineKeyboardButton(text="❌ Yo‘q, bekor qilish", callback_data=f"chaninfo:{channel_id}:{page}", style="danger")
+            ]
+        ]
+    )
+    
+    try:
+        await callback.message.edit_text(text=text, reply_markup=kb, parse_mode="HTML")
+    except TelegramBadRequest:
+        pass
+
+
+
+
+
+
+
+@router.callback_query(F.data.startswith("chantoggle_confirm:"))
+async def execute_channel_toggle(callback: CallbackQuery, session: Any):
+    # Callback ma'lumotlarini ajratib olamiz
+    _, channel_id_str, page_str = callback.data.split(":")
+    channel_id = int(channel_id_str)
+    page = int(page_str)
+    
+    service = ChannelService(session=session)
+    
+    # Biznes mantiq orqali bazada holatni o'zgartirish va keshni yangilash
+    success = await service.toggle_status(channel_id)
+    
+    if not success:
+        await callback.answer("❌ Kanal holatini o‘zgartirishda xatolik yuz berdi!", show_alert=True)
+        return
+        
+    # Chiroyli bildirishnoma (toast) chiqaradi
+    await callback.answer("🔄 Kanal holati muvaffaqiyatli yangilandi!")
+    
+    # Holat o'zgargandan keyin adminni yana o'sha kanalning info sahifasiga qaytaramiz
+    # Buning uchun callback.data ni info handler tushunadigan formatga keltirib, o'sha fuksiyani chaqiramiz
+    callback.data = f"chaninfo:{channel_id}:{page}"
+    await show_channel_info(callback, session)
