@@ -115,14 +115,26 @@ async def start_add_anime(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     await state.set_state(AddAnimeStates.poster)
     
+    text = (
+        f"🎬 {html.bold('Yangi anime qo‘shish bosqichi')}\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"1️⃣ Birinchi bo‘lib, animening {html.bold('Posterini')} (Rasm yoki Video xabar) yuboring.\n\n"
+        f"⚠️ {html.bold('Muhim tavsiyalar (UX):')}\n"
+        f"• Imkon qadar faqat {html.underline('portret')} formatdagi ({html.bold('3:4')} yoki {html.bold('2:3')} nisbatda) rasmlardan foydalaning.\n"
+        f"• Gorizontal yoki kvadrat rasmlar bot interfeysida chiroyli chiqmasligi mumkin.\n"
+        f"• Yuklanayotgan fayl sifati yuqori ekanligiga ishonch hosil qiling."
+    )
+    
     await callback.message.edit_text(
-        text=f"🎬 {html.bold('Yangi anime qo‘shish bosqichi')}\n\n"
-             f"1️⃣ Birinchi bo‘lib, animening {html.underline('Posterini')} (Rasm yoki Video xabar) yuboring:",
+        text=text,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="❌ Bekor qilish", callback_data="admin_anime")]
+            [InlineKeyboardButton(text="❌ Bekor qilish", callback_data="admin_anime", style="danger")]
         ]),
         parse_mode="HTML"
     )
+
+
+
 
 # ================= 2. POSTERNI QABUL QILISH -> INFO LINE SO‘RASH =================
 @router.message(AddAnimeStates.poster, F.photo | F.video)
@@ -133,55 +145,117 @@ async def process_poster(message: Message, state: FSMContext):
     await state.set_state(AddAnimeStates.info_line)
     
     example = html.code("Naruto | 2002 | O‘zbekcha, Yaponcha")
+    
+    text = (
+        f"📸 {html.bold('Poster qabul qilindi!')}\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"2️⃣ Endi anime asosiy ma'lumotlarini quyidagi {html.underline('shablonda')} bitta qator qilib yuboring:\n\n"
+        f"👉 {html.bold('Nomi | Yili | Tili')}\n\n"
+        f"⚠️ {html.bold('Eslatma:')} Har bir ma'lumotni ajratish uchun {html.bold('|')} (tik chiziq) belgisidan foydalaning. "
+        f"Tillarni esa vergul bilan ajratishingiz mumkin.\n\n"
+        f"📌 {html.bold('Namuna:')} {example}"
+    )
+    
     await message.answer(
-        text=f"2️⃣ Endi anime ma'lumotlarini quyidagi {html.bold('formatda, bitta qatorda')} yuboring:\n\n"
-             f"👉 {html.bold('Nomi | Yili | Tili')}\n\n"
-             f"📌 Masalan: {example}",
+        text=text,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="❌ Bekor qilish", callback_data="admin_anime")]
+            [InlineKeyboardButton(text="❌ Bekor qilish", callback_data="admin_anime", style="danger")]
         ]),
         parse_mode="HTML"
     )
 
+
+
+
+
+
+# ================= 3. INFO LINE'NI AJRATIB OLISH -> JANR TANLASHGA O‘TISH =================
 # ================= 3. INFO LINE'NI AJRATIB OLISH -> JANR TANLASHGA O‘TISH =================
 @router.message(AddAnimeStates.info_line, F.text)
 async def process_info_line(message: Message, state: FSMContext, session: Any):
     text_data = message.text
+    
+    # Xatolik yuz berganda qayta-qayta ishlatiladigan bekor qilish tugmasi
+    error_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="❌ Bekor qilish", callback_data="admin_anime", style="danger")]
+    ])
+    
     if "|" not in text_data:
-        await message.answer("❌ Noto‘g‘ri format! Iltimos, ma'lumotlarni so‘ralganidek `|` belgisi orqali ajratib yuboring.")
+        await message.answer(
+            text=f"❌ {html.bold('Format noto‘g‘ri!')}\n\n"
+                 f"Iltimos, ma'lumotlarni so‘ralganidek {html.code('|')} belgisi orqali ajratib yuboring.\n"
+                 f"📌 Namuna: {html.code('Naruto | 2002 | O‘zbekcha')}",
+            reply_markup=error_kb,
+            parse_mode="HTML"
+        )
         return
         
     parts = [p.strip() for p in text_data.split("|")]
-    if len(parts) < 3:
-        await message.answer("❌ Ma'lumotlar kam! Nomi, Yili va Tilini to‘liq kiriting.")
+    if len(parts) < 3 or not parts[0] or not parts[1] or not parts[2]:
+        await message.answer(
+            text=f"❌ {html.bold('Ma’lumotlar yetarli emas!')}\n\n"
+                 f"Nomi, Yili va Tilini to‘liq va bo‘sh joy qoldirmasdan kiriting.\n"
+                 f"📌 Namuna: {html.code('Naruto | 2002 | O‘zbekcha')}",
+            reply_markup=error_kb,
+            parse_mode="HTML"
+        )
         return
         
     title, year_str, languages_str = parts[0], parts[1], parts[2]
     
+    # Yil faqat raqamdan iboratligini tekshirish
     if not year_str.isdigit():
-        await message.answer("❌ Yili qismi faqat raqamlardan iborat bo‘lishi kerak!")
+        await message.answer(
+            text=f"❌ {html.bold('Yil noto‘g‘ri kiritildi!')}\n\n"
+                 f"Yil qismiga faqat raqam yozilishi kerak! (Masalan: {html.code('2024')})",
+            reply_markup=error_kb,
+            parse_mode="HTML"
+        )
+        return
+        
+    year = int(year_str)
+    # Yil chegarasini tekshirish (1900 - 2050)
+    if not (1900 <= year <= 2050):
+        await message.answer(
+            text=f"❌ {html.bold('Yil chegarasi xato!')}\n\n"
+                 f"Kiritilgan yil {html.bold('1900')} va {html.bold('2050')} oralig‘ida bo‘lishi shart!",
+            reply_markup=error_kb,
+            parse_mode="HTML"
+        )
         return
         
     # Tillarni vergul orqali ajratib list qilib olamiz
-    languages = [l.strip() for l in languages_str.split(",")]
+    languages = [l.strip() for l in languages_str.split(",") if l.strip()]
     
     await state.update_data(
         title=title,
-        year=int(year_str),
+        year=year,
         languages=languages,
-        selected_genres=[] # Janrlar uchun bo'sh ro'yxat ochamiz
+        selected_genres=[]  # Janrlar uchun bo'sh ro'yxat ochamiz
     )
     
     await state.set_state(AddAnimeStates.genres)
     markup = await get_genres_paginated_markup(session, selected_genres=[], page=1)
     
+    text = (
+        f"📝 {html.bold('Asosiy ma’lumotlar tasdiqlandi!')}\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"3️⃣ {html.bold('Janrlarni tanlash bosqichi')}\n\n"
+        f"Quyidagi ro‘yxatdan anime janrlarini tanlang (Har bir sahifada 20 tadan janr bor). "
+        f"Tanlangan janrlar {html.italic('yashil rangga')} kiradi.\n\n"
+        f"⏳ Tugatgach, pastdagi {html.underline('Janrlarni tasdiqlash')} tugmasini bosing:"
+    )
+    
     await message.answer(
-        text=f"3️⃣ {html.bold('Janrlarni tanlash bosqichi')}\n\n"
-             f"Quyidagi tugmalardan anime janrlarini tanlang (Har bir sahifada 20 tadan janr bor). "
-             f"Tanlangan janrlar yashil rangga kiradi. Tugatgach {html.underline('Janrlarni tasdiqlash')} tugmasini bosing:",
+        text=text,
         reply_markup=markup,
         parse_mode="HTML"
     )
+
+
+
+
+
 
 # ================= 4. JANRLAR DINAMIK TOGGLE (MULTIPLE SELECT) =================
 @router.callback_query(AddAnimeStates.genres, F.data.startswith("g_tog:"))
@@ -223,57 +297,99 @@ async def change_genre_page(callback: CallbackQuery, state: FSMContext, session:
     except Exception:
         pass
 
+
+
+# ================= 6. JANRLAR TASDIQLANDI -> TASNIF (DESCRIPTION) SO‘RASH =================
 # ================= 6. JANRLAR TASDIQLANDI -> TASNIF (DESCRIPTION) SO‘RASH =================
 @router.callback_query(AddAnimeStates.genres, F.data == "g_submit")
 async def submit_genres(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     await state.set_state(AddAnimeStates.description)
     
+    text = (
+        f"🏁 {html.bold('Janrlar muvaffaqiyatli tanlandi!')}\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"4️⃣ Endi anime uchun {html.bold('Tasnif (Description / Hikoya matni)')} yuboring:\n\n"
+        f"💡 {html.italic('Tavsiya: Ko‘p wall-of-text (uzun matn) qilib yubormaslikka harakat qiling, foydalanuvchiga o‘qishli bo‘lsin.')}"
+    )
+    
     await callback.message.edit_text(
-        text=f"4️⃣ Endi anime uchun {html.bold('Tasnif (Description / Hikoya matni)')} yuboring:",
+        text=text,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="❌ Bekor qilish", callback_data="admin_anime")]
+            [InlineKeyboardButton(text="❌ Bekor qilish", callback_data="admin_anime", style="danger")]
         ]),
         parse_mode="HTML"
     )
 
 # ================= 7. TASNIF QABUL QILINDI -> BAZAGA SAQLASH RUXSATI (CONFIRMATION) =================
+# ================= 7. TASNIF QABUL QILINDI -> BAZAGA SAQLASH RUXSATI (CONFIRMATION) =================
 @router.message(AddAnimeStates.description, F.text)
-async def process_description(message: Message, state: FSMContext):
+async def process_description(message: Message, state: FSMContext, session: Any):
     await state.update_data(description=message.text)
     await state.set_state(AddAnimeStates.confirm_save)
     
     data = await state.get_data()
+    selected_genre_ids = data.get("selected_genres", [])
     
+    # --- UX YAXSHILANISHI: IDlar o'rniga janr nomlarini bazadan olamiz ---
+    genre_names = []
+    if selected_genre_ids:
+        stmt = select(Genre).where(Genre.id.in_(selected_genre_ids))
+        res = await session.execute(stmt)
+        genres = res.scalars().all()
+        genre_names = [g.name for g in genres]
+    
+    genres_str = ", ".join(genre_names) if genre_names else "Tanlanmagan ⚠️"
+    # ---------------------------------------------------------------------
+
     preview_text = (
-        f"⚠️ {html.bold('Malumotlarni tekshiring va saqlashga ruxsat bering:')}\n\n"
+        f"📋 {html.bold('YANGI ANIME PREVIEW (TEKSHIRISH)')}\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
         f"🎬 {html.bold('Nomi:')} {data['title']}\n"
-        f"📅 {html.bold('Yili:')} {data['year']}\n"
-        f"🌐 {html.bold('Tillari:')} {', '.join(data['languages'])}\n"
-        f"📁 {html.bold('Tanlangan janrlar IDsi:')} {data['selected_genres']}\n"
-        f"📝 {html.bold('Tasnif:')} {data['description'][:100]}...\n\n"
-        f"Bazaga saqlashga ruxsat berasizmi?"
+        f"📅 {html.bold('Premyera yili:')} {html.code(data['year'])}-yil\n"
+        f"🌐 {html.bold('Dovulaj tillari:')} {', '.join(data['languages'])}\n"
+        f"📁 {html.bold('Janrlari:')} {html.italic(genres_str)}\n"
+        f"📝 {html.bold('Tasnif (Qisqacha):')} {data['description'][:150]}...\n\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"❓ {html.bold('Barcha ma’lumotlar to‘g‘rimi? Bazaga saqlashga ruxsat berasizmi?')}"
     )
     
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="🟢 Ha, saqlansin", callback_data="db_save_anime"),
-            InlineKeyboardButton(text="🔴 Yo‘q, bekor qilish", callback_data="admin_anime")
+            InlineKeyboardButton(text="🟢 Ha, saqlansin", callback_data="db_save_anime", style="success"),
+            InlineKeyboardButton(text="🔴 Yo‘q, bekor qilinsin", callback_data="admin_anime", style="danger")
         ]
     ])
     
-    await message.answer_photo(photo=data['poster_id'], caption=preview_text, reply_markup=kb, parse_mode="HTML")
+    # Poster rasm yoki video ekanligini tekshirib yuboramiz
+    try:
+        await message.answer_photo(
+            photo=data['poster_id'], 
+            caption=preview_text, 
+            reply_markup=kb, 
+            parse_mode="HTML"
+        )
+    except Exception:
+        # Agar poster video bo'lsa xatolik bermasligi uchun fallback
+        await message.answer_video(
+            video=data['poster_id'], 
+            caption=preview_text, 
+            reply_markup=kb, 
+            parse_mode="HTML"
+        )
+
 
 # ================= 8. YAKUNIY SAQLASH -> QISM QO‘SHISH YOKI ORQAGA TUGMALARI =================
+# ================= 8. YAKUNIY SAQLASH -> QISM QO‘SHISH YOKI ORTGA TUGMALARI =================
 @router.callback_query(AddAnimeStates.confirm_save, F.data == "db_save_anime")
 async def save_anime_to_db(callback: CallbackQuery, state: FSMContext, session: Any):
     data = await state.get_data()
-    await state.clear() # FSMni tozalaymiz
+    await state.clear()  # FSMni tozalaymiz
     
     service = AnimeService(session=session)
     
     try:
-        # AnimeService mantiqan tranzaksiyani saqlaydi va keshni invalidatsiya qiladi
+        # AnimeService mantiqan tranzaksiyani saqlaydi va keshni yangilaydi
         anime = await service.create_anime(
             title=data["title"],
             poster_id=data["poster_id"],
@@ -287,27 +403,38 @@ async def save_anime_to_db(callback: CallbackQuery, state: FSMContext, session: 
         anime_id = anime["anime_id"]
         
         success_text = (
-            f"🎉 {html.bold('Anime muvaffaqiyatli bazaga saqlandi!')}\n\n"
-            f"🆔 {html.bold('Anime Kodi (ID):')} {html.code(anime_id)}\n"
-            f"🎬 {html.bold('Nomi:')} {anime['title']}\n\n"
-            f"Endi ushbu anime uchun qismlar (seriyalar) yuklashingiz mumkin."
+            f"🎉 {html.bold('Muvaffaqiyatli saqlandi!')}\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"🚀 {html.bold('Anime bazaga muvaffaqiyatli qo‘shildi.')}\n\n"
+            f"🆔 {html.bold('Anime kodi:')} {html.code(anime_id)}\n"
+            f"🎬 {html.bold('Nomi:')} {html.underline(anime['title'])}\n\n"
+            f"👇 Quyidagi tugma orqali ushbu animega seriyalarni (qismlarni) ketma-ket yuklashingiz mumkin:"
         )
         
-        # Qism qo'shish va Ortga qaytish tugmalari
-        kb = InlineKeyboardMarkup(inline_keyboard=[
+        # UX Yaxshilanishi: Qism qo'shish yashil rangda, orqaga qaytish standart formatda
+        success_kb = InlineKeyboardMarkup(inline_keyboard=[
             [
-                InlineKeyboardButton(text="📹 Qism qo‘shish", callback_data=f"add_episode:{anime_id}"),
-                InlineKeyboardButton(text="⬅️ Anime menyusiga", callback_data="admin_anime")
+                InlineKeyboardButton(text="📹 Qism qo‘shish", callback_data=f"add_episode:{anime_id}", style="success"),
+                InlineKeyboardButton(text="⬅️ Anime menyusi", callback_data="admin_anime")
             ]
         ])
         
-        # photo xabaridagi inline tugmani yangilaymiz
-        await callback.message.edit_caption(caption=success_text, reply_markup=kb, parse_mode="HTML")
+        await callback.message.edit_caption(
+            caption=success_text, 
+            reply_markup=success_kb, 
+            parse_mode="HTML"
+        )
         
     except Exception as e:
+        # Xatolik yuz berganda adminga qayta harakat qilish tugmasi chiqariladi
+        error_kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ Bosh menyuga", callback_data="admin_anime", style="danger")]
+        ])
+        
         await callback.message.edit_caption(
-            caption=f"❌ Xatolik yuz berdi: {html.code(str(e))}",
-            reply_markup=kb,
+            caption=f"❌ {html.bold('Bazaga saqlashda xatolik yuz berdi:')}\n\n"
+                    f"⚠️ {html.code(str(e))}",
+            reply_markup=error_kb,
             parse_mode="HTML"
         )
 
