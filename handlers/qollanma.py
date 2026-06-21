@@ -1,4 +1,5 @@
 from aiogram import Router, html, types
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
 from dotenv.main import logger
 
@@ -46,6 +47,12 @@ async def guide_menu(callback: CallbackQuery):
             ),
             reply_markup=guide_keyboard
         )
+    except TelegramBadRequest as e:
+        if "message is not modified" in str(e).lower():
+        # Agar xabar allaqachon o'zgargan bo'lsa, xato bermaymiz, shunchaki o'tkazib yuboramiz
+            pass
+        else:
+            # Boshqa jiddiy xatolik bo'lsa logga yozamiz
+            logger.error(f"❌ Kutilmagan xatolik: {e}")
     except Exception as e:
-        logger.error(f"❌ Qo'llanma menyusini yuborishda xatolik: {e}")
-        await callback.message.answer("❌ Xatolik yuz berdi. Iltimos, keyinroq urinib ko'ring.")
+        logger.error(f"❌ Tizimda xatolik yuz berdi: {e}")

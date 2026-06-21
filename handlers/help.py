@@ -1,4 +1,5 @@
 from aiogram import Router, html, types
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
 from dotenv.main import logger
 
@@ -20,7 +21,7 @@ async def support_menu(callback: CallbackQuery):
     
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="💬 Biz bilan bog'lanish", url="https://t.me/@Khudoyqulov_pg")],
+            [InlineKeyboardButton(text="💬 Biz bilan bog'lanish", url="https://t.me/Khudoyqulov_pg")],
             # ⬇️ "Orqaga" tugmasi start.py faylidagi 'back_to_start' handleriga ulandi!
             [InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_to_start", style="danger")]
         ]
@@ -36,6 +37,12 @@ async def support_menu(callback: CallbackQuery):
             ),
             reply_markup=kb
         )
+    except TelegramBadRequest as e:
+        if "message is not modified" in str(e).lower():
+        # Agar xabar allaqachon o'zgargan bo'lsa, xato bermaymiz, shunchaki o'tkazib yuboramiz
+            pass
+        else:
+            # Boshqa jiddiy xatolik bo'lsa logga yozamiz
+            logger.error(f"❌ Kutilmagan xatolik: {e}")
     except Exception as e:
-        logger.error(f"❌ Aloqa menyusini yuborishda xatolik: {e}")
-        await callback.message.answer("❌ Xatolik yuz berdi. Iltimos, keyinroq urinib ko'ring.")
+        logger.error(f"❌ Tizimda xatolik yuz berdi: {e}")

@@ -1,4 +1,5 @@
 from aiogram import Router, html, types
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
 from dotenv.main import logger
 
@@ -42,9 +43,15 @@ async def search_menu(callback: CallbackQuery):
             ),
             reply_markup=kb
         )
+    except TelegramBadRequest as e:
+        if "message is not modified" in str(e).lower():
+        # Agar xabar allaqachon o'zgargan bo'lsa, xato bermaymiz, shunchaki o'tkazib yuboramiz
+            pass
+        else:
+            # Boshqa jiddiy xatolik bo'lsa logga yozamiz
+            logger.error(f"❌ Kutilmagan xatolik: {e}")
     except Exception as e:
-        logger.error(f"❌ Qidiruv menyusini yuborishda xatolik: {e}")
-        await callback.message.answer("❌ Xatolik yuz berdi. Iltimos, keyinroq urinib ko'ring.")
+        logger.error(f"❌ Tizimda xatolik yuz berdi: {e}")
 
 
 
@@ -80,9 +87,15 @@ async def search_by_name(callback: CallbackQuery):
             ),
             reply_markup=kb
         )
+    except TelegramBadRequest as e:
+        if "message is not modified" in str(e).lower():
+        # Agar xabar allaqachon o'zgargan bo'lsa, xato bermaymiz, shunchaki o'tkazib yuboramiz
+            pass
+        else:
+            # Boshqa jiddiy xatolik bo'lsa logga yozamiz
+            logger.error(f"❌ Kutilmagan xatolik: {e}")
     except Exception as e:
-        logger.error(f"❌ Nomi bo'yicha qidiruv interfeysida xatolik: {e}")
-        await callback.message.answer("❌ Xatolik yuz berdi. Iltimos, qaytadan urinib ko'ring.")
+        logger.error(f"❌ Tizimda xatolik yuz berdi: {e}")
 
     # Bu yerda foydalanuvchidan nomni qabul qilish va qidiruvni amalga oshirish uchun keyingi handler qo'shishingiz mumkin.
 
@@ -116,9 +129,16 @@ async def search_by_id(callback: CallbackQuery):
             ),
             reply_markup=kb
         )
+    
+    except TelegramBadRequest as e:
+        if "message is not modified" in str(e).lower():
+        # Agar xabar allaqachon o'zgargan bo'lsa, xato bermaymiz, shunchaki o'tkazib yuboramiz
+            pass
+        else:
+            # Boshqa jiddiy xatolik bo'lsa logga yozamiz
+            logger.error(f"❌ Kutilmagan xatolik: {e}")
     except Exception as e:
-        logger.error(f"❌ ID bo'yicha qidiruv interfeysida xatolik: {e}")
-        await callback.message.answer("❌ Xatolik yuz berdi. Iltimos, qaytadan urinib ko'ring.")
+        logger.error(f"❌ Tizimda xatolik yuz berdi: {e}")
 
     # Bu yerda foydalanuvchidan ID ni qabul qilish va qidiruvni amalga oshirish uchun keyingi handler qo'shishingiz mumkin.
 
@@ -153,6 +173,11 @@ async def search_by_genre(callback: CallbackQuery):
             ),
             reply_markup=kb
         )
+    except TelegramBadRequest as e:
+        if "message is not modified" in str(e).lower():
+            pass
+        else:
+            logger.error(f"❌ Kutilmagan xatolik: {e}")
     except Exception as e:
-        logger.error(f"❌ Janr bo'yicha qidiruv interfeysida xatolik: {e}")
+        logger.error(f"❌ Tizimda xatolik yuz berdi: {e}")
         await callback.message.answer("❌ Xatolik yuz berdi. Iltimos, qaytadan urinib ko'ring.")
