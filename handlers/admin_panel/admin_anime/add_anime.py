@@ -321,7 +321,7 @@ async def submit_genres(callback: CallbackQuery, state: FSMContext):
         parse_mode="HTML"
     )
 
-# ================= 7. TASNIF QABUL QILINDI -> BAZAGA SAQLASH RUXSATI (CONFIRMATION) =================
+
 # ================= 7. TASNIF QABUL QILINDI -> BAZAGA SAQLASH RUXSATI (CONFIRMATION) =================
 @router.message(AddAnimeStates.description, F.text)
 async def process_description(message: Message, state: FSMContext, session: Any):
@@ -331,7 +331,7 @@ async def process_description(message: Message, state: FSMContext, session: Any)
     data = await state.get_data()
     selected_genre_ids = data.get("selected_genres", [])
     
-    # --- UX YAXSHILANISHI: IDlar o'rniga janr nomlarini bazadan olamiz ---
+    # Janr nomlarini bazadan olish
     genre_names = []
     if selected_genre_ids:
         stmt = select(Genre).where(Genre.id.in_(selected_genre_ids))
@@ -340,18 +340,25 @@ async def process_description(message: Message, state: FSMContext, session: Any)
         genre_names = [g.name for g in genres]
     
     genres_str = ", ".join(genre_names) if genre_names else "Tanlanmagan ⚠️"
-    # ---------------------------------------------------------------------
+    languages_str = ", ".join(data['languages'])
 
+    # Eski UX uslubida ramkali mukammal dizayn (Status va ID olib tashlandi)
     preview_text = (
-        f"📋 {html.bold('YANGI ANIME PREVIEW (TEKSHIRISH)')}\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"🎬 {html.bold('Nomi:')} {data['title']}\n"
-        f"📅 {html.bold('Premyera yili:')} {html.code(data['year'])}-yil\n"
-        f"🌐 {html.bold('Dovulaj tillari:')} {', '.join(data['languages'])}\n"
-        f"📁 {html.bold('Janrlari:')} {html.italic(genres_str)}\n"
-        f"📝 {html.bold('Tasnif (Qisqacha):')} {data['description'][:150]}...\n\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"❓ {html.bold('Barcha ma’lumotlar to‘g‘rimi? Bazaga saqlashga ruxsat berasizmi?')}"
+        f"╔══════════════════╗\n"
+        f"     🎬 <b>{data['title']}</b>\n"
+        f"╚══════════════════╝\n\n"
+        f"📌 <b>Anime haqida ma'lumot:</b>\n"
+        f"╔══════════════════╗\n"
+        f"├ 📅 Yil: <b>{data['year']}</b>\n"
+        f"├ ▶️ Qism: <b>Yangi (0)</b> \n"
+        f"├ 🌐 Til: <b>{languages_str}</b>\n"
+        f"╚══════════════════╝\n"
+        f"╔══════════════════╗\n"
+        f"  🔮 Janrlar: <i>{genres_str}</i>\n"
+        f"╚══════════════════╝\n\n"
+        f"📝 <b>Tavsif:</b>\n"
+        f"<blockquote expandable>{data['description']}</blockquote>\n\n"
+        f"❓ <b>Barcha ma’lumotlar to‘g‘rimi? Bazaga saqlansinmi?</b>"
     )
     
     kb = InlineKeyboardMarkup(inline_keyboard=[
@@ -361,7 +368,6 @@ async def process_description(message: Message, state: FSMContext, session: Any)
         ]
     ])
     
-    # Poster rasm yoki video ekanligini tekshirib yuboramiz
     try:
         await message.answer_photo(
             photo=data['poster_id'], 
@@ -370,15 +376,12 @@ async def process_description(message: Message, state: FSMContext, session: Any)
             parse_mode="HTML"
         )
     except Exception:
-        # Agar poster video bo'lsa xatolik bermasligi uchun fallback
         await message.answer_video(
             video=data['poster_id'], 
             caption=preview_text, 
             reply_markup=kb, 
             parse_mode="HTML"
         )
-
-
 # ================= 8. YAKUNIY SAQLASH -> QISM QO‘SHISH YOKI ORQAGA TUGMALARI =================
 # ================= 8. YAKUNIY SAQLASH -> QISM QO‘SHISH YOKI ORTGA TUGMALARI =================
 @router.callback_query(AddAnimeStates.confirm_save, F.data == "db_save_anime")

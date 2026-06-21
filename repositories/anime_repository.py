@@ -38,8 +38,15 @@ class AnimeRepository:
         if not anime:
             return None
 
-        # Modeldagi metodga tayaniladi
-        return anime.to_dict(include_relations=True)
+        # Ustunlarni dict qilamiz va munosabatlarni qo'lda xavfsiz qo'shamiz
+        data = anime.to_dict()
+        data["genres"] = [g.id for g in anime.genres] if hasattr(anime, "genres") else []
+        data["episodes"] = [
+            {"id": ep.id, "episode": ep.episode, "file_id": ep.file_id} 
+            for ep in anime.episodes
+        ] if hasattr(anime, "episodes") else []
+        
+        return data
 
     # ================= LIST =================
     @staticmethod
@@ -53,7 +60,18 @@ class AnimeRepository:
         )
 
         result = await session.execute(stmt)
-        return [a.to_dict(include_relations=True) for a in result.scalars().all()]
+        anime_list = []
+        
+        for anime in result.scalars().all():
+            data = anime.to_dict()
+            data["genres"] = [g.id for g in anime.genres] if hasattr(anime, "genres") else []
+            data["episodes"] = [
+                {"id": ep.id, "episode": ep.episode, "file_id": ep.file_id} 
+                for ep in anime.episodes
+            ] if hasattr(anime, "episodes") else []
+            anime_list.append(data)
+            
+        return anime_list
 
     # ================= CREATE ANIME =================
     @staticmethod
@@ -88,8 +106,12 @@ class AnimeRepository:
         session.add(anime)
         await session.flush() 
         
-        # Eslatma: Bu yerda endi anime.anime_id generate bo'lgan bo'ladi
-        return anime.to_dict(include_relations=True)
+        # Ustunlarni dict qilamiz va munosabatlarni qo'lda xavfsiz qo'shamiz
+        data = anime.to_dict()
+        data["genres"] = [g.id for g in anime.genres] if hasattr(anime, "genres") else []
+        data["episodes"] = []  # Yangi yaratilganda epizodlar bo'lmaydi
+        
+        return data
 
     # ================= ADD EPISODE =================
     @staticmethod
@@ -124,8 +146,7 @@ class AnimeRepository:
         if not anime:
             return False
 
-        # TO'G'RI VARIANT: await olib tashlandi, chunki u xotiradagi stateni o'zgartiradi xolos.
         session.delete(anime) 
-        await session.flush()  # Haqiqiy SQL DELETE so'rovi shu yerda DBga boradi.
+        await session.flush()
         
         return True
