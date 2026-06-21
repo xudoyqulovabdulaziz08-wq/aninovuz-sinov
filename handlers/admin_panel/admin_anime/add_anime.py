@@ -38,6 +38,7 @@ class AddAnimeStates(StatesGroup):
 
 
 # ================= PAGINATSIYALIK JANRLAR KEYBOARDY =================
+# ================= PAGINATSIYALIK JANRLAR KEYBOARDY =================
 async def get_genres_paginated_markup(
     session: Any, 
     selected_genres: list[int], 
@@ -64,12 +65,14 @@ async def get_genres_paginated_markup(
     for genre in current_genres:
         is_selected = genre.id in selected_genres
         tick = "✅ " if is_selected else ""
+        
         # Agar tanlangan bo'lsa style="success" (yashil), bo'lmasa standart (default)
-        style_type = "success" if is_selected else "default"
+        btn_style = "success" if is_selected else "default"
         
         row.append(InlineKeyboardButton(
-            text=f"{tick}{genre.name}", 
-            callback_data=f"g_tog:{genre.id}:{page}" # Sahifani yo'qotmaslik uchun callbackga qo'shamiz
+            text=f"{tick}{genre.name}",  # Ortiqcha vergul olib tashlandi
+            callback_data=f"g_tog:{genre.id}:{page}", # Sahifani yo'qotmaslik uchun callbackga qo'shamiz
+            style=btn_style  # Siz aytgandek argument sifatida uzatildi
         ))
         if len(row) == 2:
             keyboard.append(row)
@@ -91,13 +94,19 @@ async def get_genres_paginated_markup(
         
     # Tasdiqlash va Bekor qilish boshqaruvi
     keyboard.append([
-        InlineKeyboardButton(text="📥 Janrlarni tasdiqlash", callback_data="g_submit")
+        InlineKeyboardButton(text="📥 Janrlarni tasdiqlash", callback_data="g_submit", style="success")
     ])
     keyboard.append([
-        InlineKeyboardButton(text="❌ Bekor qilish", callback_data="cancel_anime_add")
+        InlineKeyboardButton(text="❌ Bekor qilish", callback_data="admin_anime", style="danger")
     ])
     
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+
+
+
+
 
 
 # ================= 1. PROCESSSNI BOSHLASH: POSTER SO‘RASH =================
@@ -110,7 +119,7 @@ async def start_add_anime(callback: CallbackQuery, state: FSMContext):
         text=f"🎬 {html.bold('Yangi anime qo‘shish bosqichi')}\n\n"
              f"1️⃣ Birinchi bo‘lib, animening {html.underline('Posterini')} (Rasm yoki Video xabar) yuboring:",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="❌ Bekor qilish", callback_data="cancel_anime_add")]
+            [InlineKeyboardButton(text="❌ Bekor qilish", callback_data="admin_anime")]
         ]),
         parse_mode="HTML"
     )
@@ -129,7 +138,7 @@ async def process_poster(message: Message, state: FSMContext):
              f"👉 {html.bold('Nomi | Yili | Tili')}\n\n"
              f"📌 Masalan: {example}",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="❌ Bekor qilish", callback_data="admin_anime_menu")]
+            [InlineKeyboardButton(text="❌ Bekor qilish", callback_data="admin_anime")]
         ]),
         parse_mode="HTML"
     )
@@ -223,7 +232,7 @@ async def submit_genres(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(
         text=f"4️⃣ Endi anime uchun {html.bold('Tasnif (Description / Hikoya matni)')} yuboring:",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="❌ Bekor qilish", callback_data="admin_anime_menu")]
+            [InlineKeyboardButton(text="❌ Bekor qilish", callback_data="admin_anime")]
         ]),
         parse_mode="HTML"
     )
@@ -249,7 +258,7 @@ async def process_description(message: Message, state: FSMContext):
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="🟢 Ha, saqlansin", callback_data="db_save_anime"),
-            InlineKeyboardButton(text="🔴 Yo‘q, bekor qilish", callback_data="admin_anime_menu")
+            InlineKeyboardButton(text="🔴 Yo‘q, bekor qilish", callback_data="admin_anime")
         ]
     ])
     
@@ -288,7 +297,7 @@ async def save_anime_to_db(callback: CallbackQuery, state: FSMContext, session: 
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [
                 InlineKeyboardButton(text="📹 Qism qo‘shish", callback_data=f"add_episode:{anime_id}"),
-                InlineKeyboardButton(text="⬅️ Anime menyusiga", callback_data="admin_anime_menu")
+                InlineKeyboardButton(text="⬅️ Anime menyusiga", callback_data="admin_anime")
             ]
         ])
         
