@@ -181,3 +181,39 @@ class AnimeRepository:
         await real_session.flush()
         
         return result.rowcount > 0
+    
+
+
+    # ================= MULTI-GENRE SEARCH (OPTIMIZED) =================
+    @staticmethod
+    async def get_by_genres(session: Any, genre_ids: List[int]) -> List[Dict]:
+        from database.models import anime_genres  # Many-to-Many o'rtadagi jadval
+        from sqlalchemy import func
+
+        session = await AnimeRepository._prepare_session(session)
+
+        # SQL mantiqi: Tanlangan janrlar ichidan qidir, anime bo'yicha guruhla
+        # va faqat guruhdagi janrlar soni biz yuborgan janrlar soniga teng bo'lganlarini ol!
+        stmt = (
+            select(Anime)
+            .join(anime_genres)
+            .where(anime_genres.c.genre_id.in_(genre_ids))
+            .group_by(Anime.anime_id)
+            .having(func.count(anime_genres.c.genre_id) == len(genre_ids))
+            .options(selectinload(Anime.genres), selectinload(Anime.episodes))
+            .order_by(desc(Anime.anime_id))
+        )
+
+        result = await session.execute(stmt)
+        anime_list = []
+        
+        for anime in result.scalars().all():
+            data = anime.to_dict()
+            data["genres"] = [g.id for g in anime.genres] if hasattr(anime, "genres") else []
+            data["episodes"] = [
+                {"id": ep.id, "episode": ep.episode, "file_id": ep.file_id} 
+                for ep in anime.episodes
+            ] if hasattr(anime, "episodes") else []
+            anime_list.append(data)
+            
+        return anime_list

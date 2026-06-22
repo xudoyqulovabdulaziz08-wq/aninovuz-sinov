@@ -213,3 +213,13 @@ class AnimeService:
 
         await self.cache.set("search_map", "all", search_map, ttl=3600)
         return search_map
+    
+
+    # ==================================================
+    # 🔎 SEARCH BY GENRES MULTI (OPTIMIZED DB-LEVEL)
+    # ==================================================
+    async def search_by_genres(self, genre_ids: List[int]) -> List[Dict]:
+        """Tanlangan barcha janrlarga mos keluvchi animelarni bazadan eng tezkor usulda filtrlab beradi."""
+        if not genre_ids:
+            return []
+        return await self.repo.get_by_genres(self.session, genre_ids)

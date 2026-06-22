@@ -37,7 +37,8 @@ from handlers.admin_panel.admin_vip import(
 from handlers.search_menu import(
     search_id,
     search_name,
-    anime_card
+    anime_card,
+    search_genr
 )
 
 
@@ -79,6 +80,7 @@ main_router.include_routers(
 
     search.router,
     search_id.router,
-    search_name.router
+    search_name.router,
+    search_genr.router
 
 )
