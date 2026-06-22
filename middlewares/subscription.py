@@ -39,15 +39,20 @@ class CheckSubscriptionMiddleware(BaseMiddleware):
             except Exception as e:
                 logger.debug(f"Sub cache get error: {e}")
 
-        # 4. DbSessionMiddleware sessiyasini tekshirish
+        # 4. DbSessionMiddleware taqdim etgan xavfsiz proxy sessiyani olish
         session = data.get("session")
         if not session:
             logger.warning("⚠️ DbSessionMiddleware sessiyasi topilmadi, tekshiruv o'tkazib yuborildi.")
             return await handler(event, data)
 
-        # 5. Faol kanallarni yuklab olish
+        # 5. Service qatlamini yaratamiz va kesh-aware funksiyani chaqiramiz
         try:
-            channels = await ChannelRepository.get_all_active_channels(session)
+            # ChannelService obyektini sessiya bilan initsializatsiya qilamiz
+            channel_service = ChannelService(session=session)
+            
+            # Kesh va tranzaksiyadan xabardor mukammal funksiyangizni chaqiramiz:
+            channels = await channel_service.get_active_channels()
+            
         except Exception as e:
             logger.error(f"🚨 Middleware kanallarni olishda xato: {e}")
             return await handler(event, data)
