@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 router = Router()
 
-@router.callback_query(F.data == "admin_stats")
+@router.callback_query(F.data == "admin_statistics")
 async def show_admin_stats_handler(callback: CallbackQuery, session: Any):
     await callback.answer()
 
