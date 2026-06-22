@@ -1,11 +1,11 @@
 import logging
+from typing import Any
 from aiogram import Router, html, types, F
 from aiogram.filters import CommandStart, CommandObject
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton, InputMediaPhoto
 from services.user_service import UserService
 from config import config
 from aiogram.fsm.context import FSMContext
-
 logger = logging.getLogger("StartRouter")
 CREATOR_ID = config.CREATOR_ID
 router = Router()
@@ -76,7 +76,7 @@ async def cmd_start(message: Message, command: CommandObject, session: Any, user
     
     # 🚀 KANAL TUGMASIDAN PARAMETR KELGANDA (Masalan: /start anime_15,)
     if command.args:
-        clean_args = command.args.strip().rstrip(",") # Vergul yoki bo'shliqlarni tozalaymiz
+        clean_args = command.args.strip().rstrip(",")
         if clean_args.startswith("anime_"):
             try:
                 anime_id = int(clean_args.split("_")[1])
@@ -86,70 +86,10 @@ async def cmd_start(message: Message, command: CommandObject, session: Any, user
                 anime = await service.get_anime(anime_id)
                 
                 if anime:
-                    title = anime.get("title", "Nomsiz anime")
-                    year = anime.get("year", "—")
-                    description = anime.get("description") or "Tavsif kiritilmagan."
-                    episodes_count = len(anime.get("episodes", []))
-                    languages = anime.get("languages", [])
-                    languages_str = ", ".join(languages) if languages else "Mavjud emas"
+                    # 🚀 MANA — BITTACXAGI QATOR BILAN HAMMA ISH BITDI:
+                    await send_anime_card(message, anime, session)
+                    return
                     
-                    # Janrlarni bazadan professional yuklash mantiqi
-                    genres_str = "Mavjud emas"
-                    try:
-                        genre_ids = anime.get("genres", [])
-                        if genre_ids:
-                            from database.models import Genre
-                            from sqlalchemy import select
-                            res = await session.execute(select(Genre).where(Genre.id.in_(genre_ids)))
-                            genre_names = [g.name for g in res.scalars().all()]
-                            if genre_names:
-                                genres_str = ", ".join(genre_names)
-                    except Exception as genre_err:
-                        logger.error(f"❌ Janrlarni yuklashda xato: {genre_err}")
-
-                    # Daxshat ramkali professional UX dizayn (Foydalanuvchi ko'rinishi)
-                    caption = (
-                        f"╔══════════════════╗\n"
-                        f"     🎬 <b>{title}</b>\n"
-                        f"╚══════════════════╝\n\n"
-                        f"📌 <b>Anime haqida ma'lumot:</b>\n"
-                        f"╔══════════════════╗\n"
-                        f"├ 🆔 Kod: <code>#{anime.get('anime_id', anime_id)}</code>\n"  
-                        f"├ 📅 Yil: <b>{year}</b>\n"
-                        f"├ ▶️ Qism: <b>{episodes_count}</b> \n"
-                        f"├ 🌐 Til: <b>{languages_str}</b>\n"
-                        f"╚══════════════════╝\n"
-                        f"╔══════════════════╗\n"
-                        f"  🔮 Janrlar: <i>{genres_str}</i>\n"
-                        f"╚══════════════════╝\n\n"
-                        f"📝 <b>Tavsif:</b>\n"
-                        f"<blockquote expandable>{description}</blockquote>"
-                    )
-
-                    # Foydalanuvchilar uchun qismlarni ko'rish tugmasi (Admindan farqli o'laroq)
-                    user_anime_kb = InlineKeyboardMarkup(inline_keyboard=[
-                        [InlineKeyboardButton(text="📹 Qismlarni tomosha qilish", callback_data=f"show_episodes_user:{anime_id}", style="primary")],
-                        [InlineKeyboardButton(text="⬅️ Bosh menyuga qaytish", callback_data="back_to_start", style="danger")]
-                    ])
-
-                    try:
-                        await message.delete()
-                    except:
-                        pass
-
-                    poster_id = anime.get("poster_id")
-                    if poster_id:
-                        try:
-                            await message.answer_photo(photo=poster_id, caption=caption, reply_markup=user_anime_kb, parse_mode="HTML")
-                        except Exception:
-                            try:
-                                await message.answer_video(video=poster_id, caption=caption, reply_markup=user_anime_kb, parse_mode="HTML")
-                            except Exception:
-                                await message.answer(text=caption, reply_markup=user_anime_kb, parse_mode="HTML")
-                    else:
-                        await message.answer(text=caption, reply_markup=user_anime_kb, parse_mode="HTML")
-                    
-                    return # Jarayon yakunlandi, umumiy start menyusi chiqmaydi.
             except Exception as ex:
                 logger.error(f"❌ Deep link ishlashida xatolik: {ex}")
 

@@ -100,45 +100,6 @@ async def search_by_name(callback: CallbackQuery):
     # Bu yerda foydalanuvchidan nomni qabul qilish va qidiruvni amalga oshirish uchun keyingi handler qo'shishingiz mumkin.
 
 
-@router.callback_query(lambda c: c.data == "search_by_id")
-async def search_by_id(callback: CallbackQuery):
-    await callback.answer()
-    
-    search_image_file_id = "AgACAgIAAxkBAAI8pmo2wwmGj_SoELEjURiyUyabzhwoAAI5GWsbZ6WxSUf3FNSMy6ajAQADAgADdwADPAQ"
-    
-    text = (
-        "╔═════════ 🔍 ═════════╗\n"
-        "   <b>ID BO'YICHA QIDIRISH</b>\n"
-        "╚═════════ 🔍 ═════════╝\n\n"
-        "🔢 Iltimos, qidirayotgan anime ID sini yozib yuboring.\n\n"
-        "⚠️ <b>Eslatma:</b> ID raqamlardan iborat bo'lib, har bir anime uchun yagona bo'ladi!"
-    )
-    
-    kb = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="⬅️ Orqaga", callback_data="search_menu", style="danger")]
-        ]
-    )
-    
-    try:
-        await callback.message.edit_media(
-            media=InputMediaPhoto(
-                media=search_image_file_id,
-                caption=text,
-                parse_mode="HTML"
-            ),
-            reply_markup=kb
-        )
-    
-    except TelegramBadRequest as e:
-        if "message is not modified" in str(e).lower():
-        # Agar xabar allaqachon o'zgargan bo'lsa, xato bermaymiz, shunchaki o'tkazib yuboramiz
-            pass
-        else:
-            # Boshqa jiddiy xatolik bo'lsa logga yozamiz
-            logger.error(f"❌ Kutilmagan xatolik: {e}")
-    except Exception as e:
-        logger.error(f"❌ Tizimda xatolik yuz berdi: {e}")
 
     # Bu yerda foydalanuvchidan ID ni qabul qilish va qidiruvni amalga oshirish uchun keyingi handler qo'shishingiz mumkin.
 
