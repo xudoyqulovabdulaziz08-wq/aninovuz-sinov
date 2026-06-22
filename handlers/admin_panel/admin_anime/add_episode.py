@@ -207,7 +207,7 @@ async def save_episodes_to_database(callback: CallbackQuery, state: FSMContext, 
         )
         
         kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="⬅️ Anime sahifasiga", callback_data=f"list_anime_page", style="danger")]
+            [InlineKeyboardButton(text="⬅️ Anime sahifasiga", callback_data="list_anime_page:1", style="danger")]
         ])
         
         await callback.message.answer(text=final_text, reply_markup=kb, parse_mode="HTML")

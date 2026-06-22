@@ -382,7 +382,9 @@ async def process_description(message: Message, state: FSMContext, session: Any)
             reply_markup=kb, 
             parse_mode="HTML"
         )
-# ================= 8. YAKUNIY SAQLASH -> QISM QO‘SHISH YOKI ORQAGA TUGMALARI =================
+
+
+
 # ================= 8. YAKUNIY SAQLASH -> QISM QO‘SHISH YOKI ORTGA TUGMALARI =================
 @router.callback_query(AddAnimeStates.confirm_save, F.data == "db_save_anime")
 async def save_anime_to_db(callback: CallbackQuery, state: FSMContext, session: Any):
