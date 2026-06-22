@@ -132,6 +132,22 @@ class AnimeRepository:
         session.add(ep)
         await session.flush()
         return True
+    
+    # ================= DELETE EPISODE =================
+    @staticmethod
+    async def delete_episode(session: Any, anime_id: int, episode_num: int) -> bool:
+        from sqlalchemy import delete
+        real_session = await AnimeRepository._prepare_session(session)
+
+        stmt = delete(Episode).where(
+            Episode.anime_id == anime_id,
+            Episode.episode == episode_num
+        )
+        result = await real_session.execute(stmt)
+        await real_session.flush()
+        
+        # Agar kamida 1 ta qator o'chirilgan bo'lsa True qaytadi
+        return result.rowcount > 0
 
     # ================= DELETE =================
     @staticmethod
@@ -149,3 +165,5 @@ class AnimeRepository:
         await real_session.delete(anime)   # ✅ await qo'shing!
         await real_session.flush()
         return True
+    
+    

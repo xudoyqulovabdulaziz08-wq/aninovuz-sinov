@@ -116,6 +116,36 @@ class AnimeService:
             logger.error(f"❌ Failed to add episode: {e}")
             raise e
 
+
+    # ==================================================
+    # 🗑 DELETE EPISODE (TRANSACTION SAFE)
+    # ==================================================
+    async def delete_episode(self, anime_id: int, episode_num: int) -> bool:
+        try:
+            # Session'ni oldindan xavfsiz "uyg'otamiz"
+            if hasattr(self.session, "_ensure_session"):
+                await self.session._ensure_session()
+            
+            # Repozitoriy orqali o'chirishni ijro etamiz
+            ok = await self.repo.delete_episode(self.session, anime_id, episode_num)
+            
+            # Muammosiz o'chsa, tranzaksiyani saqlaymiz
+            await self.session.commit()
+
+            if ok:
+                # Keshni invalidatsiya qilamiz, shunda ro'yxat darhol yangilanadi
+                await self.cache.invalidate("anime", anime_id, broadcast=True)
+                await self.cache.invalidate("anime", "all", broadcast=True)
+                logger.info(f"🗑 Episode cache invalidated: Anime {anime_id}, Ep {episode_num}")
+
+            return ok
+
+        except Exception as e:
+            if self.session and hasattr(self.session, "rollback"):
+                await self.session.rollback()
+            logger.error(f"❌ Failed to delete episode: {e}")
+            raise e
+
     # ==================================================
     # 🗑 DELETE ANIME (TRANSACTION SAFE)
     # ==================================================
