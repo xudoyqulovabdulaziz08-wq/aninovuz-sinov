@@ -97,11 +97,7 @@ async def search_by_name(callback: CallbackQuery):
     except Exception as e:
         logger.error(f"❌ Tizimda xatolik yuz berdi: {e}")
 
-    # Bu yerda foydalanuvchidan nomni qabul qilish va qidiruvni amalga oshirish uchun keyingi handler qo'shishingiz mumkin.
 
-
-
-    # Bu yerda foydalanuvchidan ID ni qabul qilish va qidiruvni amalga oshirish uchun keyingi handler qo'shishingiz mumkin.
 
 
 
