@@ -38,7 +38,8 @@ from handlers.search_menu import(
     search_id,
     search_name,
     anime_card,
-    search_genr
+    search_genr,
+    wiev_episode
 )
 
 
@@ -75,7 +76,7 @@ main_router.include_routers(
     reklama.router,
     buy_vip.router,
     help.router,
-    
+    wiev_episode.router,
 
 
     search.router,
