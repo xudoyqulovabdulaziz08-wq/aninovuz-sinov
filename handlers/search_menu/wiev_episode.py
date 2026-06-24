@@ -37,14 +37,28 @@ async def process_anime_streaming_player(callback: CallbackQuery, session: Any):
     # Kesh-First tizimidan epizodlarni yuklaymiz
     episodes = await anime_service.get_anime_episodes_cache(anime_id)
     anime = await anime_service.get_anime(anime_id)
-    user = await user_service.get_user(callback.from_user.id) # VIP statusni tekshirish uchun
+    
+    # 🔥 Foydalanuvchini aniq aniqlash (Callback bosgan odamning IDsi)
+    user_id = callback.from_user.id
+    user = await user_service.get_user(user_id) # VIP statusni tekshirish uchun
     
     if not episodes or not anime:
         await callback.message.answer("⚠️ Kechirasiz, ushbu animening qismlari yuklanmagan yoki topilmadi.")
         return
 
-    # Foydalanuvchi statusi (is_vip dynamic property orqali tekshiriladi)
-    is_vip_or_admin = user.get("is_vip", False) or user.get("status") == "admin" or (callback.from_user.id == CREATOR_ID if 'CREATOR_ID' in globals() else False)
+    # 🛡️ VIP/Admin/Creator statusini tekshirishning eng toza va daxshatli mantiqiy zanjiri
+    c_id = getattr(config, "CREATOR_ID", None)
+    
+    is_vip_or_admin = False
+    if user:
+        is_vip_or_admin = (
+            user.get("is_vip", False) or 
+            user.get("status") == "admin" or 
+            user_id == c_id
+        )
+    else:
+        # Foydalanuvchi bazada vaqtincha aniqlanmagan bo'lsa ham Creator bo'lsa ruxsat berish
+        is_vip_or_admin = user_id == c_id
 
     # 3. Joriy ko'rilayotgan epizod obyektini topamiz
     current_episode = next((e for e in episodes if e["episode"] == current_ep_num), episodes[0])
@@ -53,7 +67,7 @@ async def process_anime_streaming_player(callback: CallbackQuery, session: Any):
     video_file_id = current_episode.get("file_id") or current_episode.get("video_file_id")
     ANINOV_PLAYER_BRAND_THUMBNAIL = "AgACAgIAAxkBAAFNRRNqO4RPF18H6wZY0ZtdQk49n-SLEAACChhrG-FJ2EmBxl_qKoRkBgEAAwIAA3gAAzwE"
 
-    # 4. Premium UX dizayn qatlamidagi matn (Caption) - Yashirin havola mutlaqo olib tashlandi, ramka buzilmaydi
+    # 4. Premium UX dizayn qatlamidagi matn (Caption)
     caption = (
         f"╔══════════════════════╗\n"
         f"   🎬 <b>{anime['title']}</b>\n"
@@ -103,7 +117,7 @@ async def process_anime_streaming_player(callback: CallbackQuery, session: Any):
     if nav_row:
         buttons.append(nav_row)
 
-    # VIP va Adminlar uchun maxsus funksiyalar
+    # 🔥 VIP va Adminlar uchun maxsus funksiyalar (Endi oddiy foydalanuvchiga umuman ko'rinmaydi!)
     if is_vip_or_admin:
         buttons.append([InlineKeyboardButton(text="📥 Barcha qismlarni yuklab olish (VIP)", callback_data=f"download_all_vip:{anime_id}")])
     
@@ -112,22 +126,22 @@ async def process_anime_streaming_player(callback: CallbackQuery, session: Any):
     
     player_kb = InlineKeyboardMarkup(inline_keyboard=buttons)
 
-    # 6. SILLIQ EDIT MEDIA MANTIQI (NETFLIX EFFECT) - 1-YO'L IMPLEMENTATSIYASI
-    # 🌟 String formatidagi file_id ni Pydantic va Aiogram validatorlaridan o'tkazish uchun virtual fayl ko'rinishiga keltiramiz
+    # 6. SILLIQ EDIT MEDIA MANTIQI (NETFLIX EFFECT)
+    # 🌟 file_id_or_bytes kalit so'zi to'g'rilandi, endi Pydantic xato bermaydi!
     fake_thumbnail = BufferedInputFile(
-        file=ANINOV_PLAYER_BRAND_THUMBNAIL.encode('utf-8'),
+        file_id_or_bytes=ANINOV_PLAYER_BRAND_THUMBNAIL.encode('utf-8'),
         filename="brand_thumb.jpg"
     )
 
     media_player = InputMediaVideo(
         media=video_file_id,
-        thumbnail=fake_thumbnail,  # 🔥 Mana bu yer Pydantic validation xatosini to'liq yo'qotadi va rasm barqaror chiqadi!
+        thumbnail=fake_thumbnail,  
         caption=caption,
         parse_mode="HTML"
     )
 
     try:
-        # Xabar edit_media bo'lganda Telegram oldingi xabardagi (anime_card dagi) protect_content holatini avtomatik saqlab qoladi
+        # Joyida silliq almashtirish
         await callback.message.edit_media(
             media=media_player,
             reply_markup=player_kb
@@ -138,18 +152,17 @@ async def process_anime_streaming_player(callback: CallbackQuery, session: Any):
         if "message is not modified" in error_msg:
             pass
         elif "message to edit not found" in error_msg or "cannot edit" in error_msg:
-            # Agar edit qilish imkoni bo'lmasa, eski xabarni o'chirib yangidan barqaror video qilib yuboramiz
             try:
                 await callback.message.delete()
             except:
                 pass
             await callback.message.answer_video(
                 video=video_file_id,
-                thumbnail=ANINOV_PLAYER_BRAND_THUMBNAIL, # answer_video ichida string to'g'ridan-to'g'ri ishlaydi
+                thumbnail=ANINOV_PLAYER_BRAND_THUMBNAIL, 
                 caption=caption,
                 reply_markup=player_kb,
                 parse_mode="HTML",
-                protect_content=not is_vip_or_admin  # Yangi yuborilganda status bo'yicha qulflanadi
+                protect_content=not is_vip_or_admin  
             )
         else:
             logger.error(f"❌ Pleyer tahrirlanishida kutilmagan xato: {e}")
