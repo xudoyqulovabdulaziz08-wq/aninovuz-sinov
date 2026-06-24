@@ -90,7 +90,7 @@ async def process_anime_streaming_player(callback: CallbackQuery, session: Any):
     page_episodes = episodes[start_idx:end_idx]
     
     # Qismlar tugmalarini 4 tadan qatorga joylash mantig'i
-    
+
     row = []
     for ep in page_episodes:
         ep_num = ep["episode"]
@@ -258,3 +258,5 @@ async def process_download_all_vip(callback: CallbackQuery, session: Any):
             "⚠️ Qismlar topildi, biroq ularning video fayllari (`file_id`) botga mos kelmadi.\n"
             "Iltimos, admin panel orqali epizodlar to'g'ri yuklanganini tekshiring."
         )
+
+        
