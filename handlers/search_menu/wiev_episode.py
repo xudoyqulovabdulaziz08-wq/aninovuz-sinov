@@ -6,7 +6,8 @@ from aiogram.exceptions import TelegramBadRequest
 
 from services.anime_service import AnimeService
 from services.user_service import UserService
-
+from config import config
+CREATOR_ID = config.CREATOR_ID
 logger = logging.getLogger("PlayerHandler")
 router = Router()
 
@@ -44,7 +45,7 @@ async def process_anime_streaming_player(callback: CallbackQuery, session: Any):
         return
 
     # Foydalanuvchi statusi (is_vip dynamic property orqali tekshiriladi)
-    is_vip_or_admin = user.get("is_vip", False) or user.get("status") == "admin"
+    is_vip_or_admin = user.get("is_vip", False) or user.get("status") == "admin" or CREATOR_ID
 
     # 3. Joriy ko'rilayotgan epizod obyektini topamiz
     current_episode = next((e for e in episodes if e["episode"] == current_ep_num), episodes[0])
@@ -132,7 +133,7 @@ async def process_anime_streaming_player(callback: CallbackQuery, session: Any):
         
         # Telegram xabarni tahrirlayotganda protect_contentni o'zgartirishga ba'zan ruxsat bermaydi, 
         # shuning uchun xabarning joriy holatiga qarab xavfsiz moslashtiramiz.
-        callback.message.protect_content = not is_vip_or_admin
+        
 
     except TelegramBadRequest as e:
         error_msg = str(e).lower()
@@ -147,11 +148,11 @@ async def process_anime_streaming_player(callback: CallbackQuery, session: Any):
                 pass
             await callback.message.answer_video(
                 video=video_file_id,
-                thumbnail=poster_id,
+                
                 caption=caption,
                 reply_markup=player_kb,
                 parse_mode="HTML",
-                protect_content=not is_vip_or_admin
+                
             )
         else:
             logger.error(f"❌ Pleyer tahrirlanishida kutilmagan xato: {e}")
