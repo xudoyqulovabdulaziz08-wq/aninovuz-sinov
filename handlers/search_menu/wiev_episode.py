@@ -51,7 +51,7 @@ async def process_anime_streaming_player(callback: CallbackQuery, session: Any):
     current_ep_num = current_episode["episode"] # Agar so'ralgan qism topilmasa birinchisiga qaytadi
     
     video_file_id = current_episode.get("file_id") or current_episode.get("video_file_id")
-    ANINOV_PLAYER_BRAND_THUMBNAIL = "AgACAgIAAxkBAAFNOU9qOrgIQz1ey-Z7MkCzZQvkTr9qSwACgxprG-FJ0EmNVQNo5jBeFwEAAwIAA3cAAzwE"
+    ANINOV_PLAYER_BRAND_THUMBNAIL = "AgACAgIAAxkBAAFNRRNqO4RPF18H6wZY0ZtdQk49n-SLEAACChhrG-FJ2EmBxl_qKoRkBgEAAwIAA3gAAzwE"
 
     # 4. Premium UX dizayn qatlamidagi matn (Caption) - Yashirin havola mutlaqo olib tashlandi, ramka buzilmaydi
     caption = (
@@ -63,7 +63,7 @@ async def process_anime_streaming_player(callback: CallbackQuery, session: Any):
         f"├ 📹 Qism: <b>{current_ep_num}-qism</b>\n"
         f"├ 🌐 Platforma: <a href='https://t.me/Aninovuz_Bot'>AniNovuz</a>\n"
         f"╚══════════════════════╝\n\n"
-        f"📢 Kanal @AniNowuz"
+        f"📢 Kanal @Aninovuz"
     )
 
     # 5. Pleyer tugmalari (Pult) arxitekturasini quramiz
