@@ -129,7 +129,7 @@ async def process_anime_streaming_player(callback: CallbackQuery, session: Any):
     # 6. SILLIQ EDIT MEDIA MANTIQI (NETFLIX EFFECT)
     # 🌟 file_id_or_bytes kalit so'zi to'g'rilandi, endi Pydantic xato bermaydi!
     fake_thumbnail = BufferedInputFile(
-        file_id_or_bytes=ANINOV_PLAYER_BRAND_THUMBNAIL.encode('utf-8'),
+        data=ANINOV_PLAYER_BRAND_THUMBNAIL.encode('utf-8'),
         filename="brand_thumb.jpg"
     )
 
