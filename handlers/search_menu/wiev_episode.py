@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from typing import Any
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, InputMediaVideo, BufferedInputFile
@@ -177,24 +178,21 @@ async def process_anime_streaming_player(callback: CallbackQuery, session: Any):
 
 @router.callback_query(F.data.startswith("download_all_vip:"))
 async def process_download_all_vip(callback: CallbackQuery, session: Any):
-    # 1. Callback datadan anime_id ni ajratib olamiz
     try:
         anime_id = int(callback.data.split(":")[1])
     except (IndexError, ValueError):
         await callback.answer("🚨 Noto'g'ri so'rov!", show_alert=True)
         return
 
-    # 2. 🗑 TEPADAGI PLEER XABARINI DARHOL O'CHIRAMIZ
-    # process_anime_streaming_player xabarini butunlay tozalash
+    # 1. 🗑 Eski pleer xabarini darhol o'chiramiz
     try:
         await callback.message.delete()
     except Exception as e:
-        logger.debug(f"Pleer xabarini o'chirishda xato (balki allaqachon o'chirilgan): {e}")
+        logger.debug(f"Xabarni o'chirishda xato: {e}")
 
-    # 3. Yuklash boshlangani haqida qisqa ogohlantirish (Alert emas, pastki notification)
-    await callback.answer("📥 Barcha qismlar yuklanmoqda, kuting...")
+    await callback.answer("📥 Qismlar bazadan qidirilmoqda...")
 
-    # 4. Anime xizmatini ishga tushirib, barcha qismlarni olamiz
+    # 2. Qismlarni keshdan yoki DB dan yuklaymiz
     try:
         anime_service = AnimeService(session=session)
         episodes = await anime_service.get_anime_episodes_cache(anime_id=anime_id)
@@ -203,37 +201,59 @@ async def process_download_all_vip(callback: CallbackQuery, session: Any):
         await callback.message.answer("❌ Qismlarni yuklashda texnik xatolik yuz berdi.")
         return
 
-    # 5. Agar qismlar topilmasa
     if not episodes:
         await callback.message.answer("📭 Ushbu animening yuklangan qismlari topilmadi.")
         return
 
-    # 6. 🚀 CHEKLOVSIZ KETMA-KET TASHAB BERISH MANTIQLARI
-    # Qismlarni tartib raqami bo'yicha saralaymiz (1-qism, 2-qism...)
-    sorted_episodes = sorted(episodes, key=lambda x: x.get("episode_number", 0))
+    # 3. Qismlarni tartiblaymiz (ustun nomi 'episode_number' yoki 'number' bo'lishi mumkin)
+    sorted_episodes = sorted(
+        episodes, 
+        key=lambda x: x.get("episode_number") or x.get("number") or 0
+    )
 
-    # VIP foydalanuvchiga xabar
-    await callback.message.answer(f"📦 <b>Jami {len(sorted_episodes)} ta qism ketma-ket yuborilmoqda...</b>", parse_mode="HTML")
+    # 4. Foydalanuvchiga yuklash boshlanganini xabar qilamiz
+    status_msg = await callback.message.answer(
+        f"📦 <b>Jami {len(sorted_episodes)} ta qism tayyorlanmoqda, ketma-ket yuboriladi...</b>", 
+        parse_mode="HTML"
+    )
 
+    sent_count = 0
+
+    # 5. 🚀 KETMA-KET YUBORISH SIKLI
     for ep in sorted_episodes:
-        video_file_id = ep.get("video_file_id")
-        ep_num = ep.get("episode_number", "?")
+        # 🔥 DIQQAT: Har xil nomlanish formatlarini tekshiramiz (Baza yoki Kesh mosligi uchun)
+        video_file_id = ep.get("video_file_id") or ep.get("video_id") or ep.get("file_id")
+        ep_num = ep.get("episode_number") or ep.get("number") or "?"
         
+        # Agar dict ichida video ID umuman topilmasa, log yozamiz va tekshiramiz
         if not video_file_id:
+            logger.warning(f"⚠️ Epizod dict ichida video kaliti topilmadi! Bor kalitlar: {list(ep.keys())}")
             continue
             
         try:
-            # Telegram serveridagi file_id orqali cheklovsiz va juda tez yuboradi
+            # Telegram API orqali videoni uzatamiz
             await callback.bot.send_video(
                 chat_id=callback.from_user.id,
-                video=video_file_id,
-                caption=f"🎬 <b>{ep_num}-Qism</b>\n\n🍿 @AniNovuz bot orqali yuklab olindi.",
+                video=str(video_file_id),
+                caption=f"🎬 <b>{ep_num}-Qism</b>\n\n🍿 @AniNovuz loyihasi taqdim etadi.",
                 parse_mode="HTML"
             )
+            sent_count += 1
+            # Telegram FloodWait olmaslik uchun har bir videodan keyin qisqa 0.3 soniya kutish qo'shamiz
+            await asyncio.sleep(0.3)
+            
         except Exception as send_err:
-            logger.error(f"Qism yuborishda xato (Ep: {ep_num}): {send_err}")
-            # Bitta qismda xato bo'lsa, sikl to'xtab qolmasligi uchun continue qilamiz
+            logger.error(f"❌ Qism yuborishda xato (Epizod: {ep_num}): {send_err}")
             continue
 
-    # Tugallanganlik haqida xabar
-    await callback.message.answer("✅ <b>Barcha qismlar muvaffaqiyatli yuborildi! Yoqimli tomosha!</b> 🍿", parse_mode="HTML")
+    # 6. Yakuniy tekshiruv va xabar
+    if sent_count > 0:
+        await callback.message.answer(
+            f"✅ <b>Barcha {sent_count} ta qism muvaffaqiyatli yuborildi! Yoqimli tomosha!</b> 🍿", 
+            parse_mode="HTML"
+        )
+    else:
+        await callback.message.answer(
+            "⚠️ Qismlar topildi, biroq ularning video fayllari (`file_id`) botga mos kelmadi.\n"
+            "Iltimos, admin panel orqali epizodlar to'g'ri yuklanganini tekshiring."
+        )
