@@ -819,7 +819,7 @@ async def process_new_anime_poster(message: Message, state: FSMContext):
 
 
 # =====================================================================
-# 📑 3-QADAM: Poster tasdiqlanganda (Ha yoki Yo'q) bosilishi (MUKAMMAL VARIANT)
+# 📑 3-QADAM: Poster tasdiqlanganda (Ha yoki Yo'q) bosilishi (ZAMonaviy VARIANT)
 # =====================================================================
 @router.callback_query(EditAnimeStates.waiting_for_confirmation, F.data.startswith("confirm_poster_edit:"))
 async def save_or_cancel_anime_poster(callback: CallbackQuery, state: FSMContext, session: Any):
@@ -849,22 +849,23 @@ async def save_or_cancel_anime_poster(callback: CallbackQuery, state: FSMContext
     try:
         service = AnimeService(session=session)
         
-        # models.py faylingizda ustun nomi aynan 'image'.
+        # 🔥 DIQQAT: models.py faylida ustun nomi 'poster_id' bo'lgani uchun 
+        # kalitni qat'iy ravishda 'poster_id' deb uzatamiz!
         success = await service.update_anime(
             anime_id=anime_id, 
-            update_data={"image": str(new_poster)}
+            update_data={"poster_id": str(new_poster)}
         )
         
         if success:
-            # 1. SQLAlchemy session keshini majburlab tozalaymiz (Identity Map va Flush keshni o'chirish uchun)
-            # Bu orqali keyingi safar ma'lumot SQL dan noldan yangi holatda o'qiladi!
+            # 1. SQLAlchemy session keshini yangilashga majburlaymiz
             if hasattr(session, "expire_all"):
                 session.expire_all()
             elif hasattr(session, "_session") and hasattr(session._session, "expire_all"):
                 session._session.expire_all()
                 
-            # 2. Valkey/Redis keshini ham tozalaymiz
-            await service.cache.invalidate("anime", anime_id)
+            # 2. Ro'yxatlar keshini va qidiruv xaritasini ham majburiy tozalaymiz
+            await service.cache.invalidate("anime", "all", broadcast=True)
+            await service.cache.invalidate("search_map", "all", broadcast=True)
             
     except Exception as e:
         logger.error(f"🚨 Poster yangilashda DB/Sessiya xatosi: {e}")
@@ -887,10 +888,10 @@ async def save_or_cancel_anime_poster(callback: CallbackQuery, state: FSMContext
     except:
         pass
 
-    # 🔥 ENG MUHIM JOYI:
-    # State-ni tozalaymiz va bosh menyuni noldan yangi sessiya/so'rov bilan chaqiramiz!
+    # FSM holatini tozalaymiz
     await state.clear()
     
+    # Yangilangan toza ma'lumot (yangi poster_id) bilan menyuni qayta chizamiz
     cloned_callback = callback.model_copy(update={"data": f"edit_anime:{anime_id}"})
     from handlers.admin_panel.admin_anime.edit_anime import process_edit_anime_menu
     await process_edit_anime_menu(cloned_callback, session)
