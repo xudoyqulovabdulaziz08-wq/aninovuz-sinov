@@ -266,3 +266,29 @@ class AnimeRepository:
                 logger.debug(f"✍️ Anime ID={anime_id}: {key} -> {value}")
                 
         return True
+    
+
+    @staticmethod
+    async def update_anime_genres(session: Any, anime_id: int, genre_ids: list[int]) -> bool:
+        """Anime janrlarini Many-to-Many munosabati orqali xavfsiz yangilash"""
+        from sqlalchemy.orm import selectinload
+        session = await AnimeRepository._prepare_session(session)
+        
+        # Animeni janrlari bilan birga yuklaymiz
+        stmt = select(Anime).where(Anime.anime_id == anime_id).options(selectinload(Anime.genres))
+        result = await session.execute(stmt)
+        anime = result.scalar_one_or_none()
+        
+        if not anime:
+            return False
+            
+        if genre_ids:
+            # Yangi janrlarni bazadan qidirib topamiz
+            genre_stmt = select(Genre).where(Genre.id.in_(genre_ids))
+            genre_result = await session.execute(genre_stmt)
+            new_genres = genre_result.scalars().all()
+            anime.genres = list(new_genres)
+        else:
+            anime.genres = [] # Agar hamma janr olib tashlansa
+            
+        return True

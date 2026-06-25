@@ -74,7 +74,7 @@ class AnimeService:
                 await self.session.rollback()
             return False
         
-        
+
     # ==================================================
     # 📋 LIST ANIME (CACHE-FIRST)
     # ==================================================
@@ -291,5 +291,28 @@ class AnimeService:
         
         return episodes
     
+
+    async def update_genres(self, anime_id: int, genre_ids: list[int]) -> bool:
+        """Business Logic: Janrlarni yangilash, commit qilish va keshni invalidatsiya qilish"""
+        if hasattr(self.session, "_ensure_session"):
+            await self.session._ensure_session()
+            
+        try:
+            success = await self.repo.update_anime_genres(self.session, anime_id, genre_ids)
+            if not success:
+                return False
+                
+            if hasattr(self.session, "commit"):
+                await self.session.commit()
+                
+            # Keshni va barcha qidiruv xaritalarini majburiy tozalaymiz
+            await self.cache.invalidate("anime", anime_id)
+            await self.cache.invalidate("anime", "all", broadcast=True)
+            return True
+        except Exception as e:
+            logger.error(f"🚨 Janrlarni yangilashda service xatosi: {e}")
+            if hasattr(self.session, "rollback"):
+                await self.session.rollback()
+            return False
 
 
