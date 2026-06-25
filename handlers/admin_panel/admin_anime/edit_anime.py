@@ -11,8 +11,9 @@ from services.anime_service import AnimeService
 
 class EditAnimeStates(StatesGroup):
     waiting_for_new_name = State()       # Yangi nomni kiritish holati
-    waiting_for_new_lang = State()          # 🌐 Yangi tilni kiritish holati
+    waiting_for_new_lang = State()       # 🌐 Yangi tilni kiritish holati
     waiting_for_new_desc = State()       # 📝 Yangi tasnifni kiritish holati
+    waiting_for_new_year = State()       # 📅 Yangi yilni kiritish holati
     waiting_for_confirmation = State()   # Ha/Yo'q tasdiqlash holati
 
 
@@ -554,6 +555,180 @@ async def save_or_cancel_anime_desc(callback: CallbackQuery, state: FSMContext, 
     
     await callback.message.edit_caption(
         caption="✅ <b>Anime tasnifi muvaffaqiyatli yangilandi!</b>",
+        reply_markup=success_kb,
+        parse_mode="HTML"
+    )
+    await state.clear()
+
+
+
+
+
+
+
+
+# =====================================================================
+# 📑 1-QADAM: "📅 Yili" tugmasi bosilganda holatga (State) o'tkazish
+# =====================================================================
+@router.callback_query(F.data.startswith("edit_field:year:"))
+async def edit_anime_year_start(callback: CallbackQuery, state: FSMContext):
+    anime_id = int(callback.data.split(":")[2])
+    
+    # Kerakli ID larni holat keshiga yozib qo'yamiz
+    await state.update_data(edit_anime_id=anime_id, main_msg_id=callback.message.message_id)
+    
+    # State-ni yil kutish holatiga o'tkazamiz
+    await state.set_state(EditAnimeStates.waiting_for_new_year)
+    
+    text = (
+        "📅 <b>Yangi chiqish yilini kiritish:</b>\n\n"
+        "Iltimos, animening yangi yilini faqat son shaklida kiriting.\n"
+        "<i>(Cheklov: 1800 - 2050 yillar oralig'ida bo'lishi kerak)</i>"
+    )
+    
+    await callback.answer("Yil tahrirlash boshlandi")
+    try:
+        await callback.message.edit_caption(caption=text, reply_markup=None, parse_mode="HTML")
+    except TelegramBadRequest:
+        pass
+
+
+# =====================================================================
+# 📑 2-QADAM: Admin yangi yil yuborganda tekshirish (Validatsiya) va Ha/Yo'q so'rash
+# =====================================================================
+@router.message(EditAnimeStates.waiting_for_new_year, F.text)
+async def process_new_anime_year(message: Message, state: FSMContext):
+    input_text = message.text.strip()
+    state_data = await state.get_data()
+    
+    anime_id = state_data.get("edit_anime_id")
+    main_msg_id = state_data.get("main_msg_id")
+    
+    # 🗑 Toza interfeys uchun admin yuborgan xabarni darhol o'chiramiz
+    try:
+        await message.delete()
+    except Exception:
+        pass
+
+    # 🛑 VALIDATSIYA: Kiritilgan matn faqat son ekanligini tekshiramiz
+    if not input_text.isdigit():
+        error_text = (
+            "⚠️ <b>Xato kiritish!</b>\n\n"
+            f"Siz kiritgan ma'lumot: <code>{input_text}</code>\n"
+            "Iltimos, yilni faqat **butun son** shaklida yuboring! (Masalan: 2024)"
+        )
+        try:
+            await message.bot.edit_message_caption(
+                chat_id=message.chat.id, message_id=main_msg_id, caption=error_text, reply_markup=None, parse_mode="HTML"
+            )
+        except: pass
+        return
+
+    new_year = int(input_text)
+
+    # 🛑 VALIDATSIYA: 1800 va 2050 oralig'ida ekanligini tekshiramiz
+    if not (1800 <= new_year <= 2050):
+        error_text = (
+            "⚠️ <b>Yil oralig'i noto'g'ri!</b>\n\n"
+            f"Siz kiritgan yil: <code>{new_year}</code>\n"
+            "Yil faqat <b>1800 va 2050 yillar oralig'ida</b> bo'lishi shart!"
+        )
+        try:
+            await message.bot.edit_message_caption(
+                chat_id=message.chat.id, message_id=main_msg_id, caption=error_text, reply_markup=None, parse_mode="HTML"
+            )
+        except: pass
+        return
+
+    # Validatsiyadan o'tsa, keshga saqlaymiz
+    await state.update_data(new_anime_year=new_year)
+    
+    # Tasdiqlash tugmalari
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✅ Ha", callback_data="confirm_year_edit:yes"),
+            InlineKeyboardButton(text="❌ Yo'q", callback_data="confirm_year_edit:no")
+        ]
+    ])
+    
+    confirm_text = (
+        f"❓ <b>Anime chiqish yili o'zgartirilsinmi?</b>\n\n"
+        f"📅 Yangi yil: <code>{new_year}</code>"
+    )
+    
+    # Tasdiqlash holatiga o'tkazib, tepadagi poster matnini o'zgartiramiz
+    await state.set_state(EditAnimeStates.waiting_for_confirmation)
+    try:
+        await message.bot.edit_message_caption(
+            chat_id=message.chat.id,
+            message_id=main_msg_id,
+            caption=confirm_text,
+            reply_markup=kb,
+            parse_mode="HTML"
+        )
+    except Exception as e:
+        logger.error(f"Yilni tasdiqlash xabarida xato: {e}")
+
+
+# =====================================================================
+# 📑 3-QADAM: Yil tasdiqlanganda (Ha yoki Yo'q) bosilishi
+# =====================================================================
+@router.callback_query(EditAnimeStates.waiting_for_confirmation, F.data.startswith("confirm_year_edit:"))
+async def save_or_cancel_anime_year(callback: CallbackQuery, state: FSMContext, session: Any):
+    action = callback.data.split(":")[1]
+    state_data = await state.get_data()
+    
+    anime_id = state_data.get("edit_anime_id")
+    new_year = state_data.get("new_anime_year")
+    
+    # ❌ AGAR ADMIN "YO'Q" DEB BEKOR QILSA
+    if action == "no":
+        await callback.answer("Tahrirlash bekor qilindi.", show_alert=True)
+        await state.clear()
+        
+        try:
+            await callback.message.delete()
+        except:
+            pass
+            
+        # Pydantic muzlatilgan ob'ekt xatosini aylanib o'tib, toza nusxa bilan bosh menyuga qaytamiz
+        cloned_callback = callback.model_copy(update={"data": f"edit_anime:{anime_id}"})
+        from handlers.admin_panel.admin_anime.edit_anime import process_edit_anime_menu
+        await process_edit_anime_menu(cloned_callback, session)
+        return
+
+    # ✅ AGAR ADMIN "HA" DEB TASDIQLASA
+    await callback.answer("Bazaga yozilmoqda...")
+    
+    try:
+        service = AnimeService(session=session)
+        # Siz yozgan o'sha universal update_anime funksiyasi orqali 'year' ustunini butun son holatida yangilaymiz
+        success = await service.update_anime(
+            anime_id=anime_id, 
+            update_data={"year": new_year}
+        )
+    except Exception as e:
+        logger.error(f"DB Update Year error: {e}")
+        success = False
+
+    if not success:
+        await callback.message.edit_caption(
+            caption="❌ <b>Xatolik:</b> Yil ma'lumotini saqlashda texnik xato yuz berdi.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+                InlineKeyboardButton(text="⚙️ Tahrirlash bo'limiga qaytish", callback_data=f"force_refresh_edit:{anime_id}")
+            ]]),
+            parse_mode="HTML"
+        )
+        await state.clear()
+        return
+
+    # Muvaffaqiyatli xabar va refresh tugmasi
+    success_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔄 Tahrirlashga qaytish", callback_data=f"force_refresh_edit:{anime_id}")]
+    ])
+    
+    await callback.message.edit_caption(
+        caption=f"✅ <b>Anime chiqish yili muvaffaqiyatli o'zgartirildi!</b>\n\n📅 Yangi yil: <code>{new_year}</code>",
         reply_markup=success_kb,
         parse_mode="HTML"
     )
