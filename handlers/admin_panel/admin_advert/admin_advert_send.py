@@ -38,7 +38,7 @@ async def process_admin_advert_menu(callback: CallbackQuery):
         ],
         [
             # Admin bosh menyusiga yoki mos keladigan asosiy panelga qaytish
-            InlineKeyboardButton(text="⬅️ Orqaga", callback_data="admin_main_menu", style="danger")
+            InlineKeyboardButton(text="⬅️ Orqaga", callback_data="admin_panel", style="danger")
         ]
     ])
     

@@ -47,7 +47,7 @@ async def admin_menu(event: Message | CallbackQuery, user: dict):
                 [InlineKeyboardButton(text="Anime bo'limi 📚", callback_data="admin_anime", style="primary")],
                 [
                     InlineKeyboardButton(text="Channel 📢", callback_data="admin_channel_menu", style="primary"),
-                    InlineKeyboardButton(text="📣 Reklama", callback_data="admin_advertisement")
+                    InlineKeyboardButton(text="📣 Reklama", callback_data="admin_advertisement", style="primary")
                 ],
                 [
                     InlineKeyboardButton(text="📊 Statistika", callback_data="admin_statistics", style="primary"),
