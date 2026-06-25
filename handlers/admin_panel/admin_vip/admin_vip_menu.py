@@ -26,7 +26,7 @@ async def admin_vip(callback: CallbackQuery, state: FSMContext):
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="➕ VIP qo‘shish", callback_data="add_vip", style="primary")],
-            [InlineKeyboardButton(text="📃 VIPlar ro‘yxati", callback_data="list_vip")],
+            [InlineKeyboardButton(text="📃 VIPlar ro‘yxati", callback_data="list_vip", style="primary")],
             
             [InlineKeyboardButton(text="⬅️ Orqaga", callback_data="admin_panel", style="danger")]  
         ]
