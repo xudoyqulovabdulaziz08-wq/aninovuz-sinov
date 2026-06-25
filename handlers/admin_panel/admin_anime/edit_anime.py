@@ -819,7 +819,7 @@ async def process_new_anime_poster(message: Message, state: FSMContext):
 
 
 # =====================================================================
-# 📑 3-QADAM: Poster tasdiqlanganda (Ha yoki Yo'q) bosilishi
+# 📑 3-QADAM: Poster tasdiqlanganda (Ha yoki Yo'q) bosilishi (TUZATILDI)
 # =====================================================================
 @router.callback_query(EditAnimeStates.waiting_for_confirmation, F.data.startswith("confirm_poster_edit:"))
 async def save_or_cancel_anime_poster(callback: CallbackQuery, state: FSMContext, session: Any):
@@ -828,20 +828,17 @@ async def save_or_cancel_anime_poster(callback: CallbackQuery, state: FSMContext
     
     anime_id = state_data.get("edit_anime_id")
     new_poster = state_data.get("new_anime_poster")
-    confirm_msg_id = state_data.get("confirm_msg_id")
     
     # ❌ AGAR ADMIN "YO'Q" DEB BEKOR QILSA
     if action == "no":
         await callback.answer("Tahrirlash bekor qilindi.", show_alert=True)
         await state.clear()
         
-        # Bot yuborgan tasdiqlash xabarini o'chiramiz
         try:
             await callback.message.delete()
         except:
             pass
             
-        # Toza nusxa bilan to'g'ridan-to'g'ri bosh tahrirlash menyusini qayta yuboramiz
         cloned_callback = callback.model_copy(update={"data": f"edit_anime:{anime_id}"})
         from handlers.admin_panel.admin_anime.edit_anime import process_edit_anime_menu
         await process_edit_anime_menu(cloned_callback, session)
@@ -852,18 +849,33 @@ async def save_or_cancel_anime_poster(callback: CallbackQuery, state: FSMContext
     
     try:
         service = AnimeService(session=session)
-        # Sadoqatli universal update_anime funksiyangiz orqali 'image' ustunini yangilaymiz
+        
+        # models.py faylingizda ustun nomi aynan 'image'. Shuning uchun kalitni 'image' beramiz!
+        # Ba'zi joylarda 'poster' deb o'qilayotgan bo'lsa xato bo'lmasligi uchun ikkala kalitni ham yangilaymiz!
+        update_payload = {
+            "image": str(new_poster),
+            "poster": str(new_poster)  # Agar model hybrid_property bo'lsa yoki adashilgan bo'lsa xavfsizlik uchun
+        }
+        
         success = await service.update_anime(
             anime_id=anime_id, 
-            update_data={"image": new_poster}
+            update_data=update_payload
         )
+        
+        # ⚠️ CRITICAL: Butun ro'yxat keshlarini ham majburiy tozalaymiz (Invalidate)
+        # Chunki karta ro'yxat keshidan (masalan, "all_animes" yoki "animes_list") o'qiyotgan bo'lishi mumkin!
+        if success and hasattr(service.cache, "delete"):
+            await service.cache.delete(f"anime:{anime_id}")
+            await service.cache.delete("all_animes")
+            await service.cache.delete("anime_list")
+            
     except Exception as e:
         logger.error(f"DB Update Poster error: {e}")
         success = False
 
     if not success:
-        await callback.message.edit_caption(
-            caption="❌ <b>Xatolik:</b> Posterni saqlashda texnik xato yuz berdi.",
+        await callback.message.answer(
+            "❌ <b>Xatolik:</b> Posterni saqlashda texnik xato yuz berdi.",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
                 InlineKeyboardButton(text="⚙️ Tahrirlash bo'limiga qaytish", callback_data=f"force_refresh_edit:{anime_id}")
             ]]),
@@ -872,14 +884,16 @@ async def save_or_cancel_anime_poster(callback: CallbackQuery, state: FSMContext
         await state.clear()
         return
 
-    # Muvaffaqiyatli xabar va refresh tugmasi
-    success_kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔄 Tahrirlashga qaytish", callback_data=f"force_refresh_edit:{anime_id}")]
-    ])
+    # Toza interfeys uchun tasdiqlash xabarini o'chirib tashlaymiz
+    try:
+        await callback.message.delete()
+    except:
+        pass
+
+    # Yangi o'rnatilgan poster bilan bosh tahrirlash menyusini noldan yangi xabar qilib chiqaramiz!
+    # Bu orqali eski keshlar o'chib, toza rasm kelishi 100% ta'minlanadi.
+    cloned_callback = callback.model_copy(update={"data": f"edit_anime:{anime_id}"})
+    from handlers.admin_panel.admin_anime.edit_anime import process_edit_anime_menu
+    await process_edit_anime_menu(cloned_callback, session)
     
-    await callback.message.edit_caption(
-        caption="✅ <b>Anime posteri muvaffaqiyatli o'zgartirildi va saqlandi!</b>",
-        reply_markup=success_kb,
-        parse_mode="HTML"
-    )
     await state.clear()
