@@ -477,8 +477,13 @@ async def process_revoke_vip_final_execution(callback: CallbackQuery, session: A
         await cache_manager.invalidate("sub_status", str(target_user_id), broadcast=True)
 
         back_kb = InlineKeyboardMarkup(inline_keyboard=[
-            # Sahifa zanjirini uzatgan holda adminga yana VIPlar ro'yxatiga qaytish imkonini beramiz
-            InlineKeyboardButton(text="⬅️ VIPlar ro'yxatiga qaytish", callback_data=f"list_vip_page:{current_page}", style="danger")
+            [
+                InlineKeyboardButton(
+                    text="⬅️ VIPlar ro'yxatiga qaytish", 
+                    callback_data=f"list_vip_page:{current_page}", 
+                    style="danger"
+                )
+            ]
         ])
 
         if not success:
