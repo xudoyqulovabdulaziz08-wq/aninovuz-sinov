@@ -63,8 +63,8 @@ async def get_vip_list_markup(session, page: int = 1, per_page: int = 10) -> tup
         
         inline_keyboard.append([
             InlineKeyboardButton(
-                text=f"💎 {username} [📅 {date_short}]", 
-                callback_data=f"v_vip:{user_id}:{page}"
+                text=f"💎 {username} [{date_short}]", 
+                callback_data=f"view_vip:{user_id}:{page}"
             )
         ])
 
@@ -153,3 +153,83 @@ async def process_vip_pagination(callback: CallbackQuery, session: Any):
 @router.callback_query(F.data == "void")
 async def process_void_click(callback: CallbackQuery):
     await callback.answer()
+
+
+
+
+
+
+
+# 1. VIP foydalanuvchi tugmasi bosilganda (Batafsil ma'lumot va boshqaruv)
+@router.callback_query(F.data.startswith("view_vip:"))
+async def process_view_vip_details(callback: CallbackQuery, session: Any):
+    await callback.answer()
+    
+    # Callback datadan kerakli ma'lumotlarni ajratib olamiz
+    params = callback.data.split(":")
+    target_user_id = int(params[1])
+    current_page = int(params[2]) # Orqaga qaytishda aynan shu sahifaga qaytish uchun
+
+    user_service = UserService(session=session)
+    user_data = await user_service.get_user(user_id=target_user_id)
+
+    if not user_data:
+        await callback.message.edit_text(
+            text="❌ Foydalanuvchi ma'lumotlari topilmadi yoki u tizimdan o'chirilgan.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="⬅️ Ro'yxatga qaytish", callback_data=f"list_vip_page:{current_page}", style="danger")]
+            ]),
+            parse_mode="HTML"
+        )
+        return
+
+    username = user_data.get("username") or "Foydalanuvchi"
+    expire_str = user_data.get("vip_expire_date")
+    
+    # Qancha vaqt qolganini aniq hisoblash (Server va Baza UTC vaqtida)
+    time_left_str = "Muddat tugagan yoki belgilanmagan"
+    formatted_expire_date = "—"
+    
+    if expire_str:
+        try:
+            # ISO stringdan datetime ob'ektiga o'tkazamiz
+            expire_dt = datetime.fromisoformat(expire_str)
+            formatted_expire_date = expire_dt.strftime("%d.%m.%Y %H:%M")
+            
+            # Server UTC vaqti bilan taqqoslaymiz
+            now = datetime.now(timezone.utc)
+            
+            if expire_dt > now:
+                diff = expire_dt - now
+                days = diff.days
+                hours = diff.seconds // 3600
+                minutes = (diff.seconds % 3600) // 60
+                
+                time_left_str = f"🟢 <b>{days} kun, {hours} soat, {minutes} daqiqa</b>"
+            else:
+                time_left_str = "🔴 <b>Muddati tugagan</b> (Kesh tozalanishi kutilmoqda)"
+        except Exception as e:
+            logger.error(f"Sana hisoblashda xatolik: {e}")
+            time_left_str = "⚠️ Sanani hisoblashda xatolik"
+
+    # Tugmalar konfiguratsiyasi (current_page zanjirini uzatib boramiz)
+    vip_manage_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="⏳ VIP Uzaytirish", callback_data=f"extend_vip:{target_user_id}:{current_page}", style="primary"),
+            InlineKeyboardButton(text="❌ VIP O'chirish", callback_data=f"revoke_vip_confirm:{target_user_id}:{current_page}", style="danger")
+        ],
+        [
+            InlineKeyboardButton(text="⬅️ Orqaga", callback_data=f"list_vip_page:{current_page}", style="danger" )
+        ]
+    ])
+
+    await callback.message.edit_text(
+        text=f"👤 <b>VIP Foydalanuvchi profili (Admin nazorati)</b>\n\n"
+             f"🆔 <b>Telegram ID:</b> <code>{target_user_id}</code>\n"
+             f"🎭 <b>Username:</b> @{username if username != 'Foydalanuvchi' else '—'}\n"
+             f"📅 <b>Tugash sanasi (UTC):</b> <code>{formatted_expire_date}</code>\n"
+             f"⏱ <b>Qolgan vaqt:</b> {time_left_str}\n\n"
+             f"✨ Foydalanuvchi ustida bajariladigan amalni tanlang:",
+        reply_markup=vip_manage_kb,
+        parse_mode="HTML"
+    )
