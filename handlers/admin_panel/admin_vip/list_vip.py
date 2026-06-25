@@ -226,7 +226,7 @@ async def process_view_vip_details(callback: CallbackQuery, session: Any):
     await callback.message.edit_text(
         text=f"👤 <b>VIP Foydalanuvchi profili (Admin nazorati)</b>\n\n"
              f"🆔 <b>Telegram ID:</b> <code>{target_user_id}</code>\n"
-             f"🎭 <b>Username:</b> @{username if username != 'Foydalanuvchi' else '—'}\n"
+             f"🎭 <b>Username:</b> @{username or target_user_id }\n"
              f"📅 <b>Tugash sanasi (UTC):</b> <code>{formatted_expire_date}</code>\n"
              f"⏱ <b>Qolgan vaqt:</b> {time_left_str}\n\n"
              f"⚠️ Eslatib otamiz vaqt mintaqasi bizning soatdan 5 soat orqada bu bilan hech qanday muddat qoshmaydi yoki muddat kamaymaydi\n"
@@ -407,6 +407,116 @@ async def process_extend_vip_final_execution(callback: CallbackQuery, session: A
         logger.error(f"VIP uzaytirishda xatolik: {e}")
         await callback.message.edit_text(
             text="❌ <b>Xatolik yuz berdi!</b> VIP muddatini uzaytirish imkoni bo'lmadi.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="⬅️ Profilga qaytish", callback_data=f"view_vip:{target_user_id}:{current_page}", style="danger")]
+            ])
+        )
+
+
+
+
+
+
+
+
+# 1. VIP O'chirish - Tasdiqlash so'rash
+@router.callback_query(F.data.startswith("revoke_vip_confirm:"))
+async def process_revoke_vip_confirmation_prompt(callback: CallbackQuery):
+    await callback.answer()
+    
+    params = callback.data.split(":")
+    target_user_id = int(params[1])
+    current_page = int(params[2]) # Orqaga qaytish sahifasini saqlab qolamiz
+    
+    confirm_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            # Ha tugmasi bosilganda yakuniy ijro callback'iga o'tadi
+            InlineKeyboardButton(text="✅ Ha, o'chirilsin", callback_data=f"rev_exec:yes:{target_user_id}:{current_page}", style="success"),
+            InlineKeyboardButton(text="❌ Yo'q, qolsin", callback_data=f"rev_exec:no:{target_user_id}:{current_page}", style="danger")
+        ]
+    ])
+    
+    await callback.message.edit_text(
+        text=f"⚠️ <b>DIQQAT: VIP maqomini bekor qilish!</b>\n\n"
+             f"Rostdan ham <code>{target_user_id}</code> ID raqamli foydalanuvchining "
+             f"<b>VIP maqomini butunlay o'chirib</b>, oddiy foydalanuvchi statusiga qaytarmoqchimisiz?",
+        reply_markup=confirm_kb,
+        parse_mode="HTML"
+    )
+
+
+
+
+
+
+
+
+# 2. VIP O'chirish - Yakuniy ijro va Userni ogohlantirish
+@router.callback_query(F.data.startswith("rev_exec:"))
+async def process_revoke_vip_final_execution(callback: CallbackQuery, session: Any):
+    params = callback.data.split(":")
+    decision = params[1]
+    target_user_id = int(params[2])
+    current_page = int(params[3])
+    
+    # Agar admin "Yo'q" deb rad etsa, silliqqina foydalanuvchi profiliga qaytaramiz
+    if decision == "no":
+        await callback.answer("O'chirish bekor qilindi.")
+        await callback.message.edit_text(text="⏳ Profil ma'lumotlariga qaytilmoqda...")
+        callback.data = f"view_vip:{target_user_id}:{current_page}"
+        return await process_view_vip_details(callback, session) # Avvalgi profil handlerini chaqiramiz
+
+    await callback.answer("⏳ VIP status bekor qilinmoqda...", show_alert=False)
+    
+    try:
+        # UserService orqali bazadan va keshdan VIP statusni xavfsiz o'chiramiz
+        user_service = UserService(session=session)
+        success = await user_service.revoke_vip(user_id=target_user_id)
+        
+        # Qo'shimcha kesh xavfsizligi (sub_status middleware uchun)
+        await cache_manager.invalidate("sub_status", str(target_user_id), broadcast=True)
+
+        back_kb = InlineKeyboardMarkup(inline_keyboard=[
+            # Sahifa zanjirini uzatgan holda adminga yana VIPlar ro'yxatiga qaytish imkonini beramiz
+            InlineKeyboardButton(text="⬅️ VIPlar ro'yxatiga qaytish", callback_data=f"list_vip_page:{current_page}", style="danger")
+        ])
+
+        if not success:
+            await callback.message.edit_text(
+                text=f"❌ <b>Xatolik:</b> <code>{target_user_id}</code> ID raqamli foydalanuvchining VIP statusini o'chirish amalga oshmadi.",
+                reply_markup=back_kb,
+                parse_mode="HTML"
+            )
+            return
+
+        # 🚀 Admin uchun muvaffaqiyatli hisobot oynasi
+        await callback.message.edit_text(
+            text=f"📉 <b>VIP maqomi bekor qilindi!</b>\n\n"
+                 f"👤 Foydalanuvchi: <code>{target_user_id}</code>\n"
+                 f"📊 Joriy status: <code>USER</code>\n"
+                 f"✨ <i>Foydalanuvchining barcha VIP imtiyozlari to'xtatildi va kesh yangilandi.</i>",
+            reply_markup=back_kb,
+            parse_mode="HTML"
+        )
+
+        # 🔔 FOYDALANUVCHIGA BOT ORQALI XABAR YUBORISH
+        try:
+            await callback.bot.send_message(
+                chat_id=target_user_id,
+                text=f"⚠️ <b>Sizning VIP maqomingiz admin tomonidan bekor qilindi!</b>\n\n"
+                     f"Agar norozi yoki shikoyatingiz bo'lsa, bot menyusidagi <b>Yordam bo'limi</b> orqali murojaat qilishingiz mumkin.",
+                parse_mode="HTML"
+            )
+            logger.info(f"🔔 Notification sent to user {target_user_id} about VIP revocation.")
+        except Exception as msg_err:
+            # Agar user botni bloklagan bo'lsa xato beradi, lekin tranzaksiya buzilmaydi
+            logger.warning(f"⚠️ Could not send notification to user {target_user_id}: {msg_err}")
+
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"❌ Admin VIP o'chirish jarayonida xatolik: {e}")
+        await callback.message.edit_text(
+            text="❌ <b>Tizim xatoligi!</b> VIP statusni o'chirishda kutilmagan muammo yuz berdi.",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="⬅️ Profilga qaytish", callback_data=f"view_vip:{target_user_id}:{current_page}", style="danger")]
             ])
