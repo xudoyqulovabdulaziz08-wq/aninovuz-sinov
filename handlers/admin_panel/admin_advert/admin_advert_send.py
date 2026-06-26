@@ -203,83 +203,6 @@ async def process_receive_advert_message(message: Message, state: FSMContext):
 
 
 
-async def broadcast_advert_in_background(
-        self, 
-        bot: Any, 
-        target_group: str, 
-        from_chat_id: int, 
-        message_id: int
-    ) -> None:
-        import asyncio
-        from sqlalchemy import select
-        from database.models import DBUser, UserStatus
-
-        logger.info(f"🚀 Background broadcast session optimized for: {target_group}")
-        
-        try:
-            if hasattr(self.session, "_ensure_session"):
-                await self.session._ensure_session()
-                
-            from repositories.user_repository import UserRepository
-            real_session = UserRepository._get_real_session(self.session)
-
-            stmt = select(DBUser.user_id)
-            if target_group == "vip":
-                stmt = stmt.where(DBUser.status == UserStatus.VIP)
-            elif target_group == "user":
-                stmt = stmt.where(DBUser.status == UserStatus.USER)
-            elif target_group == "admin":
-                stmt = stmt.where(DBUser.status == UserStatus.ADMIN)
-
-            result = await real_session.execute(stmt)
-            user_ids = result.scalars().all()
-            
-        except Exception as e:
-            logger.error(f"❌ Error fetching users for advertisement: {e}")
-            return
-
-        success_count = 0
-        fail_count = 0
-
-        # Tarqatish jarayoni (Xabar hali o'chirilmagani uchun 100% muvaffaqiyatli o'tadi)
-        for uid in user_ids:
-            try:
-                await bot.copy_message(
-                    chat_id=uid,
-                    from_chat_id=from_chat_id,
-                    message_id=message_id
-                )
-                success_count += 1
-                await asyncio.sleep(0.05)
-            except Exception as e:
-                fail_count += 1
-                logger.debug(f"Could not send ad to {uid}: {e}")
-
-        logger.info(f"🏁 Advert broadcast finished. Success: {success_count}, Failed: {fail_count}")
-
-        # 🔥 UX TOZALIK: Tarqatish tugagach, admin yuborgan o'sha asl xabarni chatdan o'chiramiz!
-        try:
-            await bot.delete_message(chat_id=from_chat_id, message_id=message_id)
-        except Exception as del_err:
-            logger.debug(f"Original message delete error: {del_err}")
-
-        # Adminga yakuniy hisobot
-        try:
-            await bot.send_message(
-                chat_id=from_chat_id,
-                text=f"📊 <b>Reklama tarqatish yakunlandi!</b>\n\n"
-                     f"🎯 Guruh: <code>{target_group.upper()}</code>\n"
-                     f"✅ Yetkazildi: <code>{success_count} ta</code>\n"
-                     f"❌ Yetkazilmadi (Botni bloklaganlar): <code>{fail_count} ta</code>\n\n"
-                     f"✨ <i>Chat tozaligi saqlandi va reklama xabari o'chirildi.</i>",
-                parse_mode="HTML"
-            )
-        except Exception:
-            pass
-
-
-
-
 
 
 
@@ -294,14 +217,28 @@ async def process_final_advert_decision(callback: CallbackQuery, state: FSMConte
     
     if decision == "no":
         await callback.answer("Reklama bekor qilindi.")
+        
+        # Admin yuborgan xabarni chatdan o'chirib tashlaymiz
         try:
             await callback.bot.delete_message(chat_id=ad_chat_id, message_id=ad_message_id)
         except Exception:
             pass
             
+        # 🧹 KESHNI TOZALASH: State'ni tozalaymiz
         await state.clear()
+        
+        # ⬅️ ORQAGA TUGMASI: F.data == "admin_advert" ga moslangan tugma
+        # Bu tugma bosilganda oyna o'sha zaxoti reklama bosh bo'limiga edit bo'ladi
+        back_kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ Orqaga", callback_data="admin_advert")]
+        ])
+        
+        # 📊 MUKAMMAL EDIT: O'sha xabarni o'zida bekor qilish statusini va orqaga tugmasini chiqaramiz!
         await callback.message.edit_text(
-            text="❌ <b>Reklama yuborish bekor qilindi.</b>\nPanel bosh menyusiga qaytishingiz mumkin.",
+            text="❌ <b>Reklama yuborish bekor qilindi.</b>\n\n"
+                 "Siz yuborgan reklama xabari o'chirildi va panel toza saqlandi. "
+                 "Quyidagi tugma orqali ortga qaytishingiz mumkin:",
+            reply_markup=back_kb,
             parse_mode="HTML"
         )
         return
