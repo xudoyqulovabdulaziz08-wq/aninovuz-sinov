@@ -146,7 +146,7 @@ async def process_select_advert_target(callback: CallbackQuery, state: FSMContex
     
     # Barcha admin paneldagi kabi chiroyli qizil (danger) rangli bekor qilish tugmasi
     cancel_kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="❌ Bekor qilish", callback_data="cancel_advert", style="danger")]
+        [InlineKeyboardButton(text="❌ Bekor qilish", callback_data="admin_advert", style="danger")]
     ])
     
     # Asosiy xabarni chiroyli qilib tahrirlaymiz
@@ -336,12 +336,3 @@ async def process_final_advert_decision(callback: CallbackQuery, state: FSMConte
     )
 
 
-# 6. Har qanday vaqtda bekor qilish handler'i
-@router.callback_query(F.data == "cancel_advert")
-async def process_cancel_advert_global(callback: CallbackQuery, state: FSMContext):
-    await callback.answer("Jarayon bekor qilindi.")
-    await state.clear()
-    await callback.message.edit_text(
-        text="❌ Reklama yuborish jarayoni bekor qilindi.",
-        parse_mode="HTML"
-    )
