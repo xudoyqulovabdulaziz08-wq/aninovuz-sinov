@@ -301,3 +301,51 @@ class UserService:
             await self.session.rollback()
             logger.error(f"❌ Failed to make admin for user {user_id}: {e}")
             raise e
+        
+
+    # ==================================================
+    # 📋 LIST ALL ADMINS
+    # ==================================================
+    async def list_admin_users(self) -> list[dict]:
+        """
+        Botdagi barcha ADMIN statusiga ega foydalanuvchilar ro'yxatini qaytaradi.
+        """
+        from sqlalchemy import select
+        from database.models import DBUser, UserStatus
+        
+        if hasattr(self.session, "_ensure_session"):
+            await self.session._ensure_session()
+            
+        real_session = self.repo._get_real_session(self.session)
+        
+        # Status admin bo'lgan barcha userlarni tanlaymiz
+        stmt = select(DBUser).where(DBUser.status == UserStatus.ADMIN).order_by(DBUser.joined_at.desc())
+        result = await real_session.execute(stmt)
+        
+        # Modellarni to_dict formatiga o'tkazib list ko'rinishida qaytaramiz
+        return [self.repo._to_dict(user) for user in result.scalars().all()]
+    
+    # ==================================================
+    # 📉 DEMOTE FROM ADMIN
+    # ==================================================
+    async def revoke_admin(self, user_id: int) -> bool:
+        try:
+            # 1. DB da statusni USER ga tushiramiz
+            ok = await self.repo.remove_admin(self.session, user_id)
+            if not ok:
+                await self.session.rollback()
+                return False
+
+            # 2. Tranzaksiyani yakunlaymiz
+            await self.session.commit()
+
+            # 3. 🧹 KESHNI TOZALASH (L1/L2 keshlar darhol o'chadi)
+            await self.cache.invalidate("users", str(user_id), broadcast=True)
+            
+            logger.info(f"📉 User {user_id} has been demoted from ADMIN to USER.")
+            return True
+            
+        except Exception as e:
+            await self.session.rollback()
+            logger.error(f"❌ Failed to revoke admin for user {user_id}: {e}")
+            raise e

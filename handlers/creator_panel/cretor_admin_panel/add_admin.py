@@ -1,9 +1,9 @@
-
+import logging
 from aiogram import Router, F, html
 from aiogram.types import CallbackQuery, Message, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from aiogram.exceptions import TelegramBadRequest
-import logging
+
 
 from database.models import UserStatus
 from services.user_service import UserService
@@ -151,7 +151,7 @@ async def process_admin_id(message: Message, state: FSMContext, user_service: Us
     # Tasdiqlash so'rovi (XA / YO'Q)
     confirm_kb = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="✅ Ha, tasdiqlayman", callback_data="confirm_add_admin:yes", style="primary"),
+            InlineKeyboardButton(text="✅ Ha, tasdiqlayman", callback_data="confirm_add_admin:yes", style="success"),
             InlineKeyboardButton(text="❌ Yo‘q, bekor qilish", callback_data="confirm_add_admin:no", style="danger")
         ]
     ])

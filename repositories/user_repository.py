@@ -229,3 +229,19 @@ class UserRepository:
 
         await session.flush()
         return result.rowcount > 0
+    
+    # ================= REMOVE ADMIN huquqi =================
+    @staticmethod
+    async def remove_admin(session: Any, user_id: int) -> bool:
+        session = await UserRepository._prepare_session(session)
+
+        result = await session.execute(
+            update(DBUser)
+            .where(DBUser.user_id == user_id)
+            .values(
+                status=UserStatus.USER  # Statusni oddiy foydalanuvchiga qaytaramiz
+            )
+        )
+
+        await session.flush()
+        return result.rowcount > 0
