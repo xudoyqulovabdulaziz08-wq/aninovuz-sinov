@@ -10,6 +10,10 @@ from handlers import(
     admin_menu,
     creator_menu
 )
+from handlers.creator_panel.cretor_admin_panel import (
+    add_admin,
+    creator_admin
+)
 from handlers.admin_panel import(
     admin_stastika
 )
@@ -57,6 +61,8 @@ main_router.include_routers(
     start.router,
     creator_menu.router,
 
+    creator_admin.router,
+    add_admin.router,
     admin_menu.router,
 
     anime_menu.router,
