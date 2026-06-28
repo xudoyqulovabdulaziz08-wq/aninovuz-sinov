@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 # Endi to'g'ridan-to'g'ri Repository yoki Valkey emas, Service chaqiriladi!
 from services.user_service import UserService 
 from services.orchestrator import state
-
+from services.data_service import DataService
 logger = logging.getLogger("DbMiddleware")
 
 
@@ -119,7 +119,9 @@ class DbSessionMiddleware(BaseMiddleware):
         
         # 2. Service obyektini yaratamiz (Inyeksiyaga tayyor)
         user_service = UserService(session=session_proxy)
+        data_service = DataService(session=session_proxy)
         data["user_service"] = user_service  # Handlerlar to'g'ridan-to'g'ri ishlata oladi
+        data["data_service"] = data_service
         
         try:
             # Fallback: Agar foydalanuvchi obyekti yo'q bo'lsa (System/Channel/Chat)
