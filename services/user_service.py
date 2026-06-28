@@ -380,3 +380,18 @@ class UserService:
             await self.session.rollback()
             logger.error(f"❌ Failed to clear outbox events: {e}")
             raise e
+        
+    # ==================================================
+    # 📤 EXPORT DATABASE TO SQL SCRIPT
+    # ==================================================
+    async def export_database_dump(self) -> str:
+        """
+        Baza ma'lumotlarini toliq SQL script ko'rinishida generatsiya qiladi.
+        """
+        try:
+            if hasattr(self.session, "_ensure_session"):
+                await self.session._ensure_session()
+            return await self.repo.generate_sql_dump(self.session)
+        except Exception as e:
+            logger.error(f"❌ Service layer export failed: {e}")
+            raise e
