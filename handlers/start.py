@@ -20,7 +20,7 @@ async def send_or_edit_start_menu(target: Message | CallbackQuery, user_id: int,
     Ushbu funksiya target turi Message bo'lsa yangi xabar yuboradi,
     CallbackQuery bo'lsa mavjud xabarni media edit (tahrirlash) qiladi.
     """
-    start_image_file_id = "AgACAgIAAxkBAAI8Vmo2h33mXWFJrVt2WytylhrKnSRKAAJHGGsbZ6WxSVOJWvc1e0TUAQADAgADdwADPAQ" 
+    start_image_file_id = "AgACAgIAAxkBAAFNp7dqQLlLE4I3g74IGAPkA534rlh7jAACXBprGyriCEpz_27sf60NogEAAwIAA3kAAzwE" 
     
     welcome_text = (
         f"👋 Xush kelibsiz, {html.bold(username)}!\n\n"
